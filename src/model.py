@@ -40,31 +40,24 @@ class HyperbolicDecisionNode:
         self.parent = parent
         self.left = None
         self.right = None
-
-        if id is None:
-            self.id = (
-                f"{self.parent.id}_{'L' if self.parent.left == self else 'R'}"
-            )
-        else:
-            self.id = id
+        self.id = id
 
         # If this is a leaf node, compute and store its prediction
         if self.leaf and len(y) > 0:
             classes, counts = np.unique(y, return_counts=True)
             self.prediction = classes[np.argmax(counts)]  # most common class
-            self.probs = dict(
-                zip(classes, counts / len(y))
-            )  # class proportions
+            self.probs = dict(zip(classes, counts / len(y)))
         else:
             self.prediction = None
             self.probs = None
 
 
 class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_depth=3, min_samples_split=2, min_samples_leaf=1):
+    def __init__(self, max_depth=3, min_samples=2, hyperbolic=True):
+        """Init classifier"""
         self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.min_samples_leaf = min_samples_leaf
+        self.min_samples = min_samples
+        self.hyperbolic = hyperbolic
 
         # Initialize tree
         self.tree = None
@@ -74,23 +67,37 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         Get indices to left and right of decision hyperplane at angle theta
         """
 
-        # Normal vector for decision hyperplane (passing through origin)
-        normal = np.zeros(X.shape[1])
-        normal[0], normal[dim] = np.sin(theta), np.cos(theta)
-
         # Get left and right nodes
         # Note that this approach does not include a bias term. We do not
         # allow bias terms in the hyperboloid case, since they do not intersect
         # the manifold at geodesics.
-        prods = X @ normal
+
+        if self.hyperbolic:
+            # Normal vector for decision hyperplane (passing through origin)
+            normal = np.zeros(X.shape[1])
+            normal[0], normal[dim] = np.sin(theta), np.cos(theta)
+            prods = X @ normal
+
+        else:
+            # Normal vector for decision hyperplane (with bias)
+            normal = np.zeros(X.shape[1])
+            normal[dim] = 1.0
+            prods = X @ normal - theta
+
         left = prods < 0.0
         right = prods >= 0.0
+        print("LEFT", left)
         return left, right
 
-    def _get_impurity(self, left, right, y):
+    def _get_impurity(self, left, right, y, leaf=False):
         """Get impurity of a split"""
         y_left, y_right = y[left], y[right]
-        return _gini(y_left) + _gini(y_right)
+        min_samples = np.min([len(y_left), len(y_right)])
+        print(f"min_samples: {min_samples}")
+        if min_samples < self.min_samples:
+            return np.inf
+        else:
+            return _gini(y_left) + _gini(y_right)
 
     def _get_best_theta_dim(self, X, y, dim):
         """
@@ -110,12 +117,22 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         X[:, dim][X[:, dim] == 0.0] = 1e-6  # Avoid division by zero
         tans = X[:, 0] / X[:, dim]
         tans[tans > 1e6] = 1e6  # Avoid overflow
+        tans[tans < -1e6] = -1e6  # Avoid overflow
         thetas = np.arctan(tans)
         thetas = np.sort(thetas)
-        thetas = np.unique(thetas)  # Remove duplicates
+        thetas = np.unique(thetas)  # Remove duplicates)
 
         # Candidates are midpoints between thetas
-        candidates = (thetas[1:] + thetas[:-1]) / 2.0
+        # candidates = (thetas[1:] + thetas[:-1]) / 2.0
+        # OVERRIDE
+        if self.hyperbolic:
+            candidates = np.linspace(0, 2 * np.pi, 1000)
+        else:
+            candidates = np.linspace(np.min(X[:, dim]), np.max(X[:, dim]), 1000)
+        print(f"Got {len(candidates)} candidates for dim {dim}")
+        print(
+            f"Max: {np.max(candidates)/np.pi:.3f}*pi, min: {np.min(candidates)/np.pi:.3f}*pi"
+        )
 
         # Get best split
         best_theta = None
@@ -142,7 +159,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         print("Finishing get_best_dim")
         return best_idx, dim_thetas[best_idx], dim_scores[best_idx]
 
-    def _fit_node(self, X, y, depth, parent=None):
+    def _fit_node(self, X, y, depth, parent=None, id="ROOT"):
         """
         Recursively fit nodes to the data
         """
@@ -152,20 +169,17 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         # Check for stopping conditions:
         if (
             (depth == self.max_depth)
-            or (len(y) < self.min_samples_split)
+            or (len(y) < self.min_samples)
             or (len(set(y)) == 1)
         ):
-            return HyperbolicDecisionNode(X, y, depth, leaf=True, parent=parent)
+            return HyperbolicDecisionNode(
+                X, y, depth, leaf=True, parent=parent, id=id
+            )
 
         # Find the best split for the current node
         best_dim, best_theta, best_score = self.get_best_dim(X, y)
-        print("145", "theta", best_theta, "dim", best_dim, "score", best_score)
 
         # Initialize current node
-        if parent is None:
-            id = "."
-        else:
-            id = None
         node = HyperbolicDecisionNode(
             X=X,
             y=y,
@@ -179,13 +193,14 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
         # Split the data into left and right partitions
         left, right = self._get_split(X=X, dim=best_dim, theta=best_theta)
+        print(f"Split data into {len(X[left])} and {len(X[right])}")
 
         # Recursive calls to _fit_node for left and right child nodes
         node.left = self._fit_node(
-            X=X[left], y=y[left], depth=depth + 1, parent=node
+            X=X[left], y=y[left], depth=depth + 1, parent=node, id=f"{id}_L"
         )
         node.right = self._fit_node(
-            X=X[right], y=y[right], depth=depth + 1, parent=node
+            X=X[right], y=y[right], depth=depth + 1, parent=node, id=f"{id}_R"
         )
 
         # Remove X and y from parent node to save memory
@@ -194,9 +209,18 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
         return node
 
+    def _validate(self, X):
+        """Ensure data lies on hyperboloid"""
+        if np.allclose(X[:, 0], np.sqrt(1 + np.sum(X[:, 1:] ** 2, axis=1))):
+            return True
+        else:
+            raise ValueError("Data must lie on hyperboloid")
+
     def fit(self, X, y):
         """Fit hyperbolic decision tree to training data"""
         # Initialize tree by fitting the root node to the data
+        self._validate(X)
+
         self.tree = self._fit_node(X=X, y=y, depth=0)
 
         return self
