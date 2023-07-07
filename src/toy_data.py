@@ -3,7 +3,7 @@
 import numpy as np
 
 
-def project_to_hyperboloid(points: np.ndarray) -> np.ndarray:
+def _project_to_hyperboloid(points: np.ndarray) -> np.ndarray:
     """Take points in ambient space and project them onto the hyperboloid"""
     points[:, 0] = np.sqrt(1.0 + np.sum(points[:, 1:] ** 2, axis=1))
     return points
@@ -31,6 +31,6 @@ def generate_points_on_branch(
         points += np.random.normal(scale=noise_std, size=points.shape)
 
     # Project onto the hyperboloid
-    points = project_to_hyperboloid(points)
+    points = _project_to_hyperboloid(points)
 
     return points
