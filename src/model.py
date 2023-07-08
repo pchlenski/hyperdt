@@ -3,11 +3,6 @@
 import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-# from geomstats.geometry.hyperboloid import Hyperboloid
-
-# Gini impurity
-from itertools import combinations
-
 
 class HyperbolicDecisionNode:
     def __init__(
@@ -35,14 +30,11 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 class HyperbolicDecisionNode:
-    def __init__(
-        self, leaf=False, value=None, feature=None, theta=None, id=None
-    ):
+    def __init__(self, leaf=False, value=None, feature=None, theta=None):
         self.leaf = leaf
         self.value = value
         self.feature = feature
         self.theta = theta
-        self.id = id
         self.left = None
         self.right = None
 
@@ -88,14 +80,14 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         thetas = np.unique(np.sort(thetas))
         return (thetas[1:] + thetas[:-1]) / 2.0
 
-    def _fit_node(self, X, y, depth, id="ROOT"):
+    def _fit_node(self, X, y, depth):
         if (
             depth == self.max_depth
             or len(y) <= self.min_samples
             or len(set(y)) == 1
         ):
             return HyperbolicDecisionNode(
-                leaf=True, value=self._most_common_label(y), id=id
+                leaf=True, value=self._most_common_label(y)
             )
         # Loop through all possible splits:
         best_dim, best_theta, best_score = None, None, -1
@@ -109,17 +101,14 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         # Contingency for no split found:
         if best_score == -1:
             return HyperbolicDecisionNode(
-                leaf=True, value=self._most_common_label(y), id=id
+                leaf=True, value=self._most_common_label(y)
             )
 
         # Populate:
         node = HyperbolicDecisionNode(feature=best_dim, theta=best_theta, id=id)
-        l, r = self._get_split(X=X, dim=best_dim, theta=best_theta)
-        d = depth + 1
-        node.left = self._fit_node(X=X[l], y=y[l], depth=d, id=f"{id}_L")
-        node.right = self._fit_node(X=X[r], y=y[r], depth=d, id=f"{id}_R")
-        node.X = None
-        node.y = None
+        left, right = self._get_split(X=X, dim=best_dim, theta=best_theta)
+        node.left = self._fit_node(X=X[left], y=y[left], depth=depth + 1)
+        node.right = self._fit_node(X=X[right], y=y[right], depth=depth + 1)
         return node
 
     def _most_common_label(self, y):
