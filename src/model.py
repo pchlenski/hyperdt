@@ -5,34 +5,9 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 
 
 class HyperbolicDecisionNode:
-    def __init__(
-        self,
-        leaf=False,
-        id=None,
-        feature=None,
-        theta=None,
-        left=None,
-        right=None,
-        value=None,
-    ):
-        """Init node"""
-        self.leaf = leaf
-        self.id = id
-        self.feature = feature
-        self.theta = theta
-        self.left = left
-        self.right = right
+    def __init__(self, value=None, probs=None, feature=None, theta=None):
         self.value = value
-
-
-import numpy as np
-from sklearn.base import BaseEstimator, ClassifierMixin
-
-
-class HyperbolicDecisionNode:
-    def __init__(self, leaf=False, value=None, feature=None, theta=None):
-        self.leaf = leaf
-        self.value = value
+        self.probs = probs
         self.feature = feature
         self.theta = theta
         self.left = None
@@ -51,10 +26,12 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         v[0], v[dim] = np.sin(theta), np.cos(theta)
         return v
 
-    def _gini(self, y):
+    def _get_probs(self, y):
         _, counts = np.unique(y, return_counts=True)
-        probs = counts / len(y)
-        return 1 - np.sum(probs ** 2)
+        return counts / len(y)
+
+    def _gini(self, y):
+        return 1 - np.sum(self._get_probs(y) ** 2)
 
     def _information_gain(self, left, right, y):
         n = len(y)
@@ -86,10 +63,8 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             or len(y) <= self.min_samples
             or len(set(y)) == 1
         ):
-            return HyperbolicDecisionNode(
-                leaf=True, value=self._most_common_label(y)
-            )
-        # Loop through all possible splits:
+            value, probs = self._leaf_values(y)
+            return HyperbolicDecisionNode(value=value, probs=probs)
         best_dim, best_theta, best_score = None, None, -1
         for dim in self.dims:
             for theta in self._get_candidates(X=X, dim=dim):
@@ -100,20 +75,19 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
         # Contingency for no split found:
         if best_score == -1:
-            return HyperbolicDecisionNode(
-                leaf=True, value=self._most_common_label(y)
-            )
+            value, probs = self._leaf_values(y)
+            return HyperbolicDecisionNode(value=value, probs=probs)
 
         # Populate:
-        node = HyperbolicDecisionNode(feature=best_dim, theta=best_theta, id=id)
+        node = HyperbolicDecisionNode(feature=best_dim, theta=best_theta)
         left, right = self._get_split(X=X, dim=best_dim, theta=best_theta)
         node.left = self._fit_node(X=X[left], y=y[left], depth=depth + 1)
         node.right = self._fit_node(X=X[right], y=y[right], depth=depth + 1)
         return node
 
-    def _most_common_label(self, y):
-        _, counts = np.unique(y, return_counts=True)
-        return np.argmax(counts) if len(counts) > 0 else None
+    def _leaf_values(self, y):
+        probs = self._get_probs(y)
+        return np.argmax(probs), probs
 
     def fit(self, X, y):
         self.ndim = X.shape[1]
@@ -122,8 +96,9 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def _traverse(self, x, node):
-        if node.leaf:
+        if node.value is not None:
             return node
+
         if self.hyperbolic:
             v = self._normal(node.feature, node.theta)
             return (
@@ -143,4 +118,4 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def predict_probs(self, X):
         """Predict class probabilities for samples in X"""
-        raise NotImplementedError
+        return np.array([self._traverse(x, self.tree).probs for x in X])
