@@ -3,6 +3,10 @@
 import numpy as np
 from scipy import stats
 
+from tqdm import tqdm
+
+from joblib import Parallel, delayed
+
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
 
@@ -27,10 +31,19 @@ class HyperbolicRandomForestClassifier:
         indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[indices], y[indices]
 
-    def fit(self, X, y):
-        for tree in self.trees:
-            X_sample, y_sample = self._generate_subsample(X, y)
-            tree.fit(X_sample, y_sample)
+    def fit(self, X, y, use_tqdm=False, njobs=False):
+        trees = tqdm(self.trees) if use_tqdm else self.trees
+        if tqdm:
+            trees = tqdm(trees)
+        if njobs > 1:
+            Parallel(n_jobs=njobs)(
+                delayed(tree.fit)(*self._generate_subsample(X, y))
+                for tree in trees
+            )
+        else:
+            for tree in trees:
+                X_sample, y_sample = self._generate_subsample(X, y)
+                tree.fit(X_sample, y_sample)
         return self
 
     def predict(self, X):
