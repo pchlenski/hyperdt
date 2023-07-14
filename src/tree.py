@@ -119,3 +119,11 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def predict_probs(self, X):
         """Predict class probabilities for samples in X"""
         return np.array([self._traverse(x, self.tree).probs for x in X])
+
+    def predict_proba(self, X):
+        """Predict class probabilities for samples in X"""
+        return self.predict_probs(X)
+
+    def score(self, X, y):
+        """Return the mean accuracy on the given test data and labels"""
+        return np.mean(self.predict(X) == y)

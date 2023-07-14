@@ -49,3 +49,6 @@ class HyperbolicRandomForestClassifier:
     def predict(self, X):
         predictions = np.array([tree.predict(X) for tree in self.trees])
         return np.squeeze(stats.mode(predictions, axis=0).mode)
+
+    def score(self, X, y):
+        return np.mean(self.predict(X) == y)
