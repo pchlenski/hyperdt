@@ -15,11 +15,14 @@ class HyperbolicDecisionNode:
 
 
 class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
-    def __init__(self, max_depth=3, min_samples=2, hyperbolic=True):
+    def __init__(
+        self, max_depth=3, min_samples=2, hyperbolic=True, min_dist=1e-4
+    ):
         self.max_depth = max_depth
         self.min_samples = min_samples
         self.hyperbolic = hyperbolic
         self.tree = None
+        self.min_dist = min_dist
 
     def _normal(self, dim, theta):
         v = np.zeros(self.ndim)
@@ -55,7 +58,10 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         X[:, dim][X[:, dim] == 0.0] = 1e-6
         thetas = np.arctan(X[:, 0] / X[:, dim])
         thetas = np.unique(np.sort(thetas))
-        return (thetas[1:] + thetas[:-1]) / 2.0
+
+        # Keep only those that are sufficiently far apart; take midpoints:
+        thetas = thetas[np.where(np.abs(np.diff(thetas)) > self.min_dist)[0]]
+        return (thetas[:-1] + thetas[1:]) / 2.0
 
     def _fit_node(self, X, y, depth):
         if (
