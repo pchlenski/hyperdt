@@ -1,0 +1,4 @@
+data/
+hsvm/
+hyperbolic_learning/
+*.pyc
