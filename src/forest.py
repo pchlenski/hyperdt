@@ -42,12 +42,12 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[indices], y[indices]
 
-    def fit(self, X, y, use_tqdm=False, njobs=-1):
+    def fit(self, X, y, use_tqdm=False, n_jobs=-1):
         trees = tqdm(self.trees) if use_tqdm else self.trees
         if tqdm:
             trees = tqdm(trees)
-        if njobs > 1:
-            Parallel(n_jobs=njobs)(
+        if n_jobs > 1:
+            Parallel(n_jobs=n_jobs)(
                 delayed(tree.fit)(*self._generate_subsample(X, y))
                 for tree in trees
             )
