@@ -1,6 +1,7 @@
 """Hyperbolic decision tree model"""
 
 import numpy as np
+from warnings import warn
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 
@@ -19,12 +20,22 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self,
         max_depth=3,
         min_samples=2,
+        min_samples_leaf=1,
+        min_samples_split=2,
         hyperbolic=True,
         min_dist=0,
         candidates="data",
     ):
         self.max_depth = max_depth
-        self.min_samples = min_samples
+        # self.min_samples = min_samples
+        self.min_samples = min_samples_leaf
+        self.min_samples_split = min_samples_split
+        if min_samples:
+            warn(
+                "min_samples is deprecated; use min_samples_leaf and min_samples_split instead"
+            )
+            self.min_samples_leaf = min_samples
+            self.min_samples_split = min_samples
         self.hyperbolic = hyperbolic
         self.tree = None
         self.min_dist = min_dist
@@ -77,7 +88,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def _fit_node(self, X, y, depth):
         if (
             depth == self.max_depth
-            or len(y) <= self.min_samples
+            or len(y) <= self.min_samples_split
             or len(set(y)) == 1
         ):
             value, probs = self._leaf_values(y)
@@ -86,9 +97,10 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         for dim in self.dims:
             for theta in self._get_candidates(X=X, dim=dim):
                 left, right = self._get_split(X=X, dim=dim, theta=theta)
-                score = self._information_gain(left, right, y)
-                if score > best_score:
-                    best_dim, best_theta, best_score = dim, theta, score
+                if np.min([len(y[left]), len(y[right])]) >= self.min_samples:
+                    score = self._information_gain(left, right, y)
+                    if score > best_score:
+                        best_dim, best_theta, best_score = dim, theta, score
 
         # Contingency for no split found:
         if best_score == -1:
