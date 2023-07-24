@@ -106,13 +106,13 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         # probs = self._get_probs(y)
         # return np.argmax(probs), probs
         _, inverse_y = np.unique(y, return_inverse=True)
-        probs = np.bincount(inverse_y, minlength=len(self.classes)) / len(y)
+        probs = np.bincount(inverse_y, minlength=len(self.classes_)) / len(y)
         return np.argmax(probs), probs
 
     def fit(self, X, y):
         self.ndim = X.shape[1]
         self.dims = range(1, self.ndim) if self.hyperbolic else range(self.ndim)
-        self.classes = np.unique(y)
+        self.classes_ = np.unique(y)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
