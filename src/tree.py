@@ -16,13 +16,19 @@ class HyperbolicDecisionNode:
 
 class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
-        self, max_depth=3, min_samples=2, hyperbolic=True, min_dist=1e-4
+        self,
+        max_depth=3,
+        min_samples=2,
+        hyperbolic=True,
+        min_dist=0,
+        candidates="data",
     ):
         self.max_depth = max_depth
         self.min_samples = min_samples
         self.hyperbolic = hyperbolic
         self.tree = None
         self.min_dist = min_dist
+        self.candidates = candidates
 
     def _normal(self, dim, theta):
         v = np.zeros(self.ndim)
@@ -55,13 +61,18 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             return X[:, dim] < theta, X[:, dim] >= theta
 
     def _get_candidates(self, X, dim):
-        X[:, dim][X[:, dim] == 0.0] = 1e-6
-        thetas = np.arctan(X[:, 0] / X[:, dim])
-        thetas = np.unique(np.sort(thetas))
+        if self.candidates == "data":
+            X[:, dim][X[:, dim] == 0.0] = 1e-6
+            thetas = np.arctan(X[:, 0] / X[:, dim])
+            thetas = np.unique(np.sort(thetas))
 
-        # Keep only those that are sufficiently far apart; take midpoints:
-        thetas = thetas[np.where(np.abs(np.diff(thetas)) > self.min_dist)[0]]
-        return (thetas[:-1] + thetas[1:]) / 2.0
+            # Keep only those that are sufficiently far apart; take midpoints:
+            thetas = thetas[
+                np.where(np.abs(np.diff(thetas)) > self.min_dist)[0]
+            ]
+            return (thetas[:-1] + thetas[1:]) / 2.0
+        elif self.candidates == "grid":
+            return np.linspace(-np.pi / 4, np.pi / 4, 1000)
 
     def _fit_node(self, X, y, depth):
         if (
@@ -92,12 +103,16 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return node
 
     def _leaf_values(self, y):
-        probs = self._get_probs(y)
+        # probs = self._get_probs(y)
+        # return np.argmax(probs), probs
+        _, inverse_y = np.unique(y, return_inverse=True)
+        probs = np.bincount(inverse_y, minlength=len(self.classes)) / len(y)
         return np.argmax(probs), probs
 
     def fit(self, X, y):
         self.ndim = X.shape[1]
         self.dims = range(1, self.ndim) if self.hyperbolic else range(self.ndim)
+        self.classes = np.unique(y)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
@@ -122,13 +137,9 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def predict(self, X):
         return np.array([self._traverse(x, self.tree).value for x in X])
 
-    def predict_probs(self, X):
-        """Predict class probabilities for samples in X"""
-        return np.array([self._traverse(x, self.tree).probs for x in X])
-
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
-        return self.predict_probs(X)
+        return np.array([self._traverse(x, self.tree).probs for x in X])
 
     def score(self, X, y):
         """Return the mean accuracy on the given test data and labels"""

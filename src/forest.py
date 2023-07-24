@@ -13,16 +13,27 @@ from sklearn.ensemble import RandomForestClassifier
 from .tree import HyperbolicDecisionTreeClassifier
 
 
-class HyperbolicRandomForestClassifier:
+class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
-        self, n_estimators=100, max_depth=3, min_samples=2, hyperbolic=True
+        self,
+        n_estimators=100,
+        max_depth=3,
+        min_samples=2,
+        min_dist=0,
+        hyperbolic=True,
     ):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples = min_samples
         self.hyperbolic = hyperbolic
+        self.min_dist = min_dist
         self.trees = [
-            HyperbolicDecisionTreeClassifier(max_depth, min_samples, hyperbolic)
+            HyperbolicDecisionTreeClassifier(
+                max_depth=max_depth,
+                min_samples=min_samples,
+                min_dist=min_dist,
+                hyperbolic=hyperbolic,
+            )
             for _ in range(n_estimators)
         ]
 
