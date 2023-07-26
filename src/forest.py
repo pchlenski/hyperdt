@@ -18,19 +18,22 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         self,
         n_estimators=100,
         max_depth=3,
-        min_samples=2,
+        min_samples_split=2,
+        min_samples_leaf=1,
         min_dist=0,
         hyperbolic=True,
     ):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
-        self.min_samples = min_samples
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
         self.hyperbolic = hyperbolic
         self.min_dist = min_dist
         self.trees = [
             HyperbolicDecisionTreeClassifier(
                 max_depth=max_depth,
-                min_samples=min_samples,
+                min_samples_split=min_samples_split,
+                min_samples_leaf=min_samples_leaf,
                 min_dist=min_dist,
                 hyperbolic=hyperbolic,
             )
@@ -44,13 +47,12 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y, use_tqdm=False, n_jobs=-1):
         trees = tqdm(self.trees) if use_tqdm else self.trees
-        if tqdm:
-            trees = tqdm(trees)
-        if n_jobs > 1:
-            Parallel(n_jobs=n_jobs)(
+        if n_jobs != 1:
+            fitted_trees = Parallel(n_jobs=n_jobs)(
                 delayed(tree.fit)(*self._generate_subsample(X, y))
                 for tree in trees
             )
+            self.trees = fitted_trees
         else:
             for tree in trees:
                 X_sample, y_sample = self._generate_subsample(X, y)

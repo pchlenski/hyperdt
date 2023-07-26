@@ -19,23 +19,15 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
         max_depth=3,
-        min_samples=2,
         min_samples_leaf=1,
         min_samples_split=2,
         hyperbolic=True,
         min_dist=0,
-        candidates="data",
+        candidates="data",  # 'data' or 'grid'
     ):
         self.max_depth = max_depth
-        # self.min_samples = min_samples
-        self.min_samples = min_samples_leaf
+        self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
-        if min_samples:
-            warn(
-                "min_samples is deprecated; use min_samples_leaf and min_samples_split instead"
-            )
-            self.min_samples_leaf = min_samples
-            self.min_samples_split = min_samples
         self.hyperbolic = hyperbolic
         self.tree = None
         self.min_dist = min_dist
@@ -56,8 +48,8 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def _information_gain(self, left, right, y):
         n = len(y)
         n_l, n_r = len(y[left]), len(y[right])
-        if np.min([n_l, n_r]) < self.min_samples:
-            return -1
+        # if np.min([n_l, n_r]) < self.min_samples_leaf:
+        #     return -1
         parent_loss = self._gini(y)
         child_loss = (
             n_l * self._gini(y[left]) + n_r * self._gini(y[right])
@@ -97,7 +89,10 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         for dim in self.dims:
             for theta in self._get_candidates(X=X, dim=dim):
                 left, right = self._get_split(X=X, dim=dim, theta=theta)
-                if np.min([len(y[left]), len(y[right])]) >= self.min_samples:
+                if (
+                    np.min([len(y[left]), len(y[right])])
+                    >= self.min_samples_leaf
+                ):
                     score = self._information_gain(left, right, y)
                     if score > best_score:
                         best_dim, best_theta, best_score = dim, theta, score
