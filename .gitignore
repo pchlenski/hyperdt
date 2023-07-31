@@ -2,3 +2,4 @@ data/
 hsvm/
 hyperbolic_learning/
 *.pyc
+src/__pycache__/
