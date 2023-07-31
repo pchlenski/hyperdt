@@ -1,0 +1,6 @@
+README.md
+setup.py
+src/hyperdt.egg-info/PKG-INFO
+src/hyperdt.egg-info/SOURCES.txt
+src/hyperdt.egg-info/dependency_links.txt
+src/hyperdt.egg-info/top_level.txt
