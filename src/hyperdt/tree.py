@@ -33,6 +33,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.tree = None
         self.min_dist = min_dist
         self.candidates = candidates
+        self.criterion = criterion
         if criterion == "gini":
             self._loss = self._gini
         elif criterion == "entropy":
