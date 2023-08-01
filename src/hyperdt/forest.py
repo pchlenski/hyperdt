@@ -56,6 +56,9 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y, use_tqdm=False):
         """Fit a decision tree to subsamples"""
+        self.classes_ = np.unique(y)
+
+        # Fit decision trees individually (parallelized):
         trees = tqdm(self.trees) if use_tqdm else self.trees
         if self.n_jobs != 1:
             fitted_trees = Parallel(n_jobs=self.n_jobs)(
