@@ -22,6 +22,8 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         min_samples_leaf=1,
         min_dist=0,
         hyperbolic=True,
+        criterion="gini",
+        n_jobs=-1,
     ):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -29,6 +31,7 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.min_samples_leaf = min_samples_leaf
         self.hyperbolic = hyperbolic
         self.min_dist = min_dist
+        self.criterion = criterion
         self.trees = [
             HyperbolicDecisionTreeClassifier(
                 max_depth=max_depth,
@@ -36,19 +39,21 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
                 min_samples_leaf=min_samples_leaf,
                 min_dist=min_dist,
                 hyperbolic=hyperbolic,
+                criterion=criterion,
             )
             for _ in range(n_estimators)
         ]
+        self.n_jobs = n_jobs
 
     def _generate_subsample(self, X, y):
         n_samples = X.shape[0]
         indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[indices], y[indices]
 
-    def fit(self, X, y, use_tqdm=False, n_jobs=-1):
+    def fit(self, X, y, use_tqdm=False):
         trees = tqdm(self.trees) if use_tqdm else self.trees
-        if n_jobs != 1:
-            fitted_trees = Parallel(n_jobs=n_jobs)(
+        if self.n_jobs != 1:
+            fitted_trees = Parallel(n_jobs=self.n_jobs)(
                 delayed(tree.fit)(*self._generate_subsample(X, y))
                 for tree in trees
             )
@@ -62,6 +67,10 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
     def predict(self, X):
         predictions = np.array([tree.predict(X) for tree in self.trees])
         return np.squeeze(stats.mode(predictions, axis=0).mode)
+    
+    def predict_proba(self, X):
+        predictions = np.array([tree.predict_proba(X) for tree in self.trees])
+        return np.mean(predictions, axis=0)
 
     def score(self, X, y):
         return np.mean(self.predict(X) == y)
