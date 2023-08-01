@@ -24,6 +24,7 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         hyperbolic=True,
         criterion="gini",
         n_jobs=-1,
+        timelike_dim=0,
     ):
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -32,6 +33,7 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.hyperbolic = hyperbolic
         self.min_dist = min_dist
         self.criterion = criterion
+        self.timelike_dim = timelike_dim
         self.trees = [
             HyperbolicDecisionTreeClassifier(
                 max_depth=max_depth,
@@ -40,6 +42,7 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
                 min_dist=min_dist,
                 hyperbolic=hyperbolic,
                 criterion=criterion,
+                timelike_dim=timelike_dim,
             )
             for _ in range(n_estimators)
         ]
