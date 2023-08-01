@@ -46,11 +46,13 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.n_jobs = n_jobs
 
     def _generate_subsample(self, X, y):
+        """Generate a random subsample of the data"""
         n_samples = X.shape[0]
         indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[indices], y[indices]
 
     def fit(self, X, y, use_tqdm=False):
+        """Fit a decision tree to subsamples"""
         trees = tqdm(self.trees) if use_tqdm else self.trees
         if self.n_jobs != 1:
             fitted_trees = Parallel(n_jobs=self.n_jobs)(
@@ -65,12 +67,15 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X):
+        """Predict the class of each sample in X"""
         predictions = np.array([tree.predict(X) for tree in self.trees])
         return np.squeeze(stats.mode(predictions, axis=0).mode)
-    
+
     def predict_proba(self, X):
+        """Predict the class probabilities of each sample in X"""
         predictions = np.array([tree.predict_proba(X) for tree in self.trees])
         return np.mean(predictions, axis=0)
 
     def score(self, X, y):
+        """Return the mean accuracy on the given test data and labels"""
         return np.mean(self.predict(X) == y)
