@@ -154,11 +154,20 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
+
+        # Some attributes we need:
         self.ndim = X.shape[1]
-        self.dims = range(1, self.ndim) if self.hyperbolic else range(self.ndim)
+        self.dims = list(range(self.ndim))
+        if self.hyperbolic:
+            if self.timelike_dim == -1:
+                self.dims.remove(self.ndim - 1) # Not clean but whatever
+            else:
+                self.dims.remove(self.timelike_dim)
         self.classes_ = np.unique(y)
-        self.tree = self._fit_node(X=X, y=y, depth=0)
+
+        # Validate data and fit tree:
         self._validate_hyperbolic(X)
+        self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
     def _traverse(self, x, node):
