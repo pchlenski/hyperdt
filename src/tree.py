@@ -25,6 +25,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         min_dist=0,
         candidates="data",  # 'data' or 'grid'
         criterion="gini",  # 'gini', 'entropy', or 'misclassification'
+        timelike_dim=0,
     ):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
@@ -33,6 +34,10 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.tree = None
         self.min_dist = min_dist
         self.candidates = candidates
+        self.criterion = criterion
+        self.timelike_dim = timelike_dim
+
+        # Set loss
         if criterion == "gini":
             self._loss = self._gini
         elif criterion == "entropy":
@@ -45,19 +50,24 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             )
 
     def _get_probs(self, y):
+        """Get the class probabilities"""
         _, counts = np.unique(y, return_counts=True)
         return counts / len(y)
 
     def _gini(self, y):
+        """Gini impurity"""
         return 1 - np.sum(self._get_probs(y) ** 2)
 
     def _entropy(self, y):
+        """Entropy"""
         return -np.sum(self._get_probs(y) * np.log2(self._get_probs(y)))
 
     def _misclassification(self, y):
+        """Misclassification error"""
         return 1 - np.max(self._get_probs(y))
 
     def _information_gain(self, left, right, y):
+        """Get the information gain from splitting on a given dimension"""
         n = len(y)
         n_l, n_r = len(y[left]), len(y[right])
         parent_loss = self._loss(y)
@@ -67,11 +77,13 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return parent_loss - child_loss
 
     def _normal(self, dim, theta):
+        """Get a normal vector to the hyperplane"""
         v = np.zeros(self.ndim)
-        v[0], v[dim] = np.sin(theta), np.cos(theta)
+        v[self.timelike_dim], v[dim] = np.sin(theta), np.cos(theta)
         return v
 
     def _get_split(self, X, dim, theta):
+        """Get the indices of the split"""
         if self.hyperbolic:
             prods = X @ self._normal(dim, theta)
             return prods < 0.0, prods >= 0.0
@@ -79,9 +91,10 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             return X[:, dim] < theta, X[:, dim] >= theta
 
     def _get_candidates(self, X, dim):
+        """Get candidate angles for a given dimension"""
         if self.candidates == "data":
             X[:, dim][X[:, dim] == 0.0] = 1e-6
-            thetas = np.arctan(X[:, 0] / X[:, dim])
+            thetas = np.arctan(X[:, self.timelike_dim] / X[:, dim])
             thetas = np.unique(np.sort(thetas))
 
             # Keep only those that are sufficiently far apart; take midpoints:
@@ -93,6 +106,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             return np.linspace(-np.pi / 4, np.pi / 4, 1000)
 
     def _fit_node(self, X, y, depth):
+        """Recursively fit a node of the tree"""
         if (
             depth == self.max_depth
             or len(y) <= self.min_samples_split
@@ -125,20 +139,30 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return node
 
     def _leaf_values(self, y):
-        # probs = self._get_probs(y)
-        # return np.argmax(probs), probs
+        """Return the value and probability of a leaf node"""
         _, inverse_y = np.unique(y, return_inverse=True)
         probs = np.bincount(inverse_y, minlength=len(self.classes_)) / len(y)
         return np.argmax(probs), probs
 
+    def _validate_hyperbolic(self, X):
+        """Ensure points lie on a hyperboloid - subtract timelike twice from sum
+        of all squares, rather than once from sum of all spacelike squares, to
+        simplify indexing"""
+        assert np.allclose(
+            np.sum(X ** 2, axis=1) - 2 * X[:, self.timelike_dim] ** 2, -1.0
+        )
+
     def fit(self, X, y):
+        """Fit a decision tree to the data"""
         self.ndim = X.shape[1]
         self.dims = range(1, self.ndim) if self.hyperbolic else range(self.ndim)
         self.classes_ = np.unique(y)
         self.tree = self._fit_node(X=X, y=y, depth=0)
+        self._validate_hyperbolic(X)
         return self
 
     def _traverse(self, x, node):
+        """Traverse a decision tree for a single point"""
         if node.value is not None:
             return node
 
@@ -157,6 +181,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             )
 
     def predict(self, X):
+        """Predict labels for samples in X"""
         return np.array([self._traverse(x, self.tree).value for x in X])
 
     def predict_proba(self, X):
@@ -174,21 +199,19 @@ class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTreeClassifier):
         self._loss = self._mse
 
     def _mse(self, y):
+        """Mean squared error"""
         return np.mean((y - np.mean(y)) ** 2)
 
-    def _information_gain(self, left, right, y):
-        return self._loss(y) - (
-            len(left) * self._loss(y[left]) + len(right) * self._loss(y[right])
-        ) / len(y)
-
     def _leaf_values(self, y):
-        return np.mean(y), None
+        """Return the value and probability (dummy) of a leaf node"""
+        return np.mean(y), None  # TODO: probs?
 
     def predict_proba(self, X):
+        """Predict class probabilities for samples in X (dummy)"""
         raise NotImplementedError("Regression does not support predict_proba")
 
     def score(self, X, y, metric="mse"):
-        """Return the mean accuracy on the given test data and labels"""
+        """Return the mean accuracy/score on the given test data and labels"""
         y_hat = self.predict(X)
         if metric == "mse":
             return np.mean((y - y_hat) ** 2)
