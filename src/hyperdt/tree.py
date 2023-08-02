@@ -151,6 +151,7 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         assert np.allclose(
             np.sum(X ** 2, axis=1) - 2 * X[:, self.timelike_dim] ** 2, -1.0
         )
+        assert X[:, self.timelike_dim].max() <= 0.0
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
