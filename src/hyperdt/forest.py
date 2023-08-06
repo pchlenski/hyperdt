@@ -75,7 +75,7 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
     def predict(self, X):
         """Predict the class of each sample in X"""
         predictions = np.array([tree.predict(X) for tree in self.trees])
-        return np.squeeze(stats.mode(predictions, axis=0).mode)
+        return stats.mode(predictions, axis=0, keepdims=False)[0]
 
     def predict_proba(self, X):
         """Predict the class probabilities of each sample in X"""
