@@ -42,7 +42,7 @@ def _poincare_to_klein(X):
 def _poincare_to_hyperboloid(X):
     """Convert Poincare ball coordinates to hyperboloid coordinates."""
     # Compute squared norm for each sample
-    norm_squared = np.sum(X ** 2, axis=1)
+    norm_squared = np.linalg.norm(X, axis=1) ** 2
     denominator = 1 - norm_squared
 
     # Compute X0 for each sample
