@@ -165,7 +165,9 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
-        if self.sparse_dot_product:
+        if self.sparse_dot_product and X.ndim == 1:
+            return np.sin(theta) * X[self.timelike_dim] + np.cos(theta) * X[dim]
+        elif self.sparse_dot_product:
             return (
                 np.sin(theta) * X[:, self.timelike_dim]
                 + np.cos(theta) * X[:, dim]
