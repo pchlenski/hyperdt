@@ -5,7 +5,6 @@ from warnings import warn
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 
-# class HyperbolicDecisionNode:
 class DecisionNode:
     def __init__(self, value=None, probs=None, feature=None, theta=None):
         self.value = value
@@ -33,41 +32,30 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         # Set loss
         if criterion == "gini":
             self._loss = self._gini
-        elif criterion == "entropy":
-            self._loss = self._entropy
-        elif criterion == "misclassification":
-            self._loss = self._misclassification
-        else:
-            raise ValueError(
-                "criterion must be one of 'gini', 'entropy', or 'misclassification'"
-            )
 
     def _get_probs(self, y):
-        """Get the class probabilities"""
-        _, inverse_y = np.unique(y, return_inverse=True)
-        return np.bincount(inverse_y, minlength=len(self.classes_)) / len(y)
+        """Get the class probabilities
+
+        Args:
+        ----
+        y: (n_classes,) vector of class labels
+
+        Returns:
+        -------
+        (n_classes,) vector of class probabilities
+        """
+        return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
     def _gini(self, y):
         """Gini impurity"""
         return 1 - np.sum(self._get_probs(y) ** 2)
 
-    def _entropy(self, y):
-        """Entropy"""
-        probs = self._get_probs(y)
-        return -np.sum(probs[probs > 0] * np.log2(probs[probs > 0]))
-
-    def _misclassification(self, y):
-        """Misclassification error"""
-        return 1 - np.max(self._get_probs(y))
-
     def _information_gain(self, left, right, y):
         """Get the information gain from splitting on a given dimension"""
-        n = len(y)
-        n_l, n_r = len(y[left]), len(y[right])
+        y_l, y_r = y[left], y[right]
+        w_l, w_r = len(y_l) / len(y), len(y_r) / len(y)
         parent_loss = self._loss(y)
-        child_loss = (
-            n_l * self._loss(y[left]) + n_r * self._loss(y[right])
-        ) / n
+        child_loss = w_l * self._loss(y_l) + w_r * self._loss(y_r)
         return parent_loss - child_loss
 
     def _get_split(self, X, dim, theta):
@@ -76,37 +64,39 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def _get_candidates(self, X, dim):
         """Get candidate angles for a given dimension"""
-        # return np.unique(np.sort(X[:, dim]))[:-1]
-        return np.unique(X[:, dim])  # don't need to sort
+        unique_vals = np.unique(X[:, dim])  # already sorted
+        return (unique_vals[:-1] + unique_vals[1:]) / 2
 
     def _fit_node(self, X, y, depth):
         """Recursively fit a node of the tree"""
+
+        # Base case
         if (
             depth == self.max_depth
             or len(y) <= self.min_samples_split
             or len(np.unique(y)) == 1
         ):
             value, probs = self._leaf_values(y)
-            return DecisionNode(value=value, probs=probs)
+            out = DecisionNode(value=value, probs=probs)
+            out.X = X
+            out.y = y
+            return out  # TODO: remove once we're done debugging
+
+        # Recursively find the best split:
         best_dim, best_theta, best_score = None, None, -1
         for dim in self.dims:
             for theta in self._get_candidates(X=X, dim=dim):
                 left, right = self._get_split(X=X, dim=dim, theta=theta)
-                if (
-                    np.min([len(y[left]), len(y[right])])
-                    >= self.min_samples_leaf
-                ):
+                min_len = np.min([len(y[left]), len(y[right])])
+                if min_len >= self.min_samples_leaf:
                     score = self._information_gain(left, right, y)
                     if score > best_score:
                         best_dim, best_theta, best_score = dim, theta, score
 
-        # Contingency for no split found:
-        if best_score == -1:
-            value, probs = self._leaf_values(y)
-            return DecisionNode(value=value, probs=probs)
-
         # Populate:
         node = DecisionNode(feature=best_dim, theta=best_theta)
+        node.X = X  # TODO: remove once we're done debugging
+        node.y = y  # TODO: remove once we're done debugging
         left, right = self._get_split(X=X, dim=best_dim, theta=best_theta)
         node.left = self._fit_node(X=X[left], y=y[left], depth=depth + 1)
         node.right = self._fit_node(X=X[right], y=y[right], depth=depth + 1)
@@ -117,6 +107,13 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         probs = self._get_probs(y)
         return np.argmax(probs), probs
 
+    def _validate_labels(self, y):
+        try:
+            assert np.max(y) == len(self.classes_) - 1
+            assert np.min(y) == 0
+        except AssertionError:
+            raise ValueError("Labels must be integers from 0 to n_classes - 1")
+
     def fit(self, X, y):
         """Fit a decision tree to the data"""
 
@@ -126,6 +123,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.classes_ = np.unique(y)
 
         # Validate data and fit tree:
+        self._validate_labels(y)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
@@ -133,8 +131,13 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         """Boolean: Go left?"""
         return x[node.feature] < node.theta
 
-    def _traverse(self, x, node):
+    def _traverse(self, x, node=None):
         """Traverse a decision tree for a single point"""
+        # Root case
+        if node is None:
+            node = self.tree
+
+        # Leaf case
         if node.value is not None:
             return node
 
@@ -146,11 +149,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         """Predict labels for samples in X"""
-        return np.array([self._traverse(x, self.tree).value for x in X])
+        return np.array([self._traverse(x).value for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
-        return np.array([self._traverse(x, self.tree).probs for x in X])
+        return np.array([self._traverse(x).probs for x in X])
 
     def score(self, X, y):
         """Return the mean accuracy on the given test data and labels"""
@@ -199,14 +202,17 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         of all squares, rather than once from sum of all spacelike squares, to
         simplify indexing"""
         X_spacelike = X[:, self.dims]  # Nice and clean
-        assert np.allclose(
-            np.sum(X_spacelike ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
-            -1.0,
-        )
-        assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
-        assert np.all(
-            X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1)
-        )
+        try:
+            assert np.allclose(
+                np.sum(X_spacelike ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
+                -1.0,
+            )
+            assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
+            assert np.all(
+                X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1)
+            )
+        except AssertionError:
+            raise ValueError("Points must lie on a hyperboloid")
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -231,7 +237,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         return x @ v < 0.0
 
 
-class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTreeClassifier):
+class DecisionTreeRegressor(DecisionTreeClassifier):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._loss = self._mse
@@ -259,3 +265,12 @@ class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTreeClassifier):
             return np.mean(np.abs(y - y_hat))
         elif metric in ["r2", "R2"]:
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
+
+
+class HyperbolicDecisionTreeRegressor(
+    DecisionTreeRegressor, HyperbolicDecisionTreeClassifier
+):
+    """Hacky multiple inheritance constructor - seems to work though"""
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
