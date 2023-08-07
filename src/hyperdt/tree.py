@@ -34,16 +34,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             self._loss = self._gini
 
     def _get_probs(self, y):
-        """Get the class probabilities
-
-        Args:
-        ----
-        y: (n_classes,) vector of class labels
-
-        Returns:
-        -------
-        (n_classes,) vector of class probabilities
-        """
+        """Get the class probabilities"""
         return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
     def _gini(self, y):
