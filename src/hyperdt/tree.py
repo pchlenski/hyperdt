@@ -68,10 +68,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             or len(np.unique(y)) == 1
         ):
             value, probs = self._leaf_values(y)
-            out = DecisionNode(value=value, probs=probs)
-            out.X = X
-            out.y = y
-            return out  # TODO: remove once we're done debugging
+            return DecisionNode(value=value, probs=probs)
 
         # Recursively find the best split:
         best_dim, best_theta, best_score = None, None, -1
@@ -86,8 +83,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
         # Populate:
         node = DecisionNode(feature=best_dim, theta=best_theta)
-        node.X = X  # TODO: remove once we're done debugging
-        node.y = y  # TODO: remove once we're done debugging
+        node.score = best_score
         left, right = self._get_split(X=X, dim=best_dim, theta=best_theta)
         node.left = self._fit_node(X=X[left], y=y[left], depth=depth + 1)
         node.right = self._fit_node(X=X[right], y=y[right], depth=depth + 1)
@@ -153,24 +149,36 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def __init__(
-        self, candidates="grid", min_dist=0.0, timelike_dim=0, **kwargs
+        self,
+        candidates="grid",
+        min_dist=0.0,
+        timelike_dim=0,
+        sparse_dot_product=True,
+        **kwargs
     ):
         super().__init__(**kwargs)
         self.candidates = candidates
         self.min_dist = min_dist
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
+        self.sparse_dot_product = sparse_dot_product
 
-    def _normal(self, dim, theta):
-        """Get a normal vector to the hyperplane"""
-        v = np.zeros(self.ndim)
-        v[self.timelike_dim], v[dim] = np.sin(theta), np.cos(theta)
-        return v
+    def _dot(self, X, dim, theta):
+        """Get the dot product of the normal vector and the data"""
+        if self.sparse_dot_product:
+            return (
+                np.sin(theta) * X[:, self.timelike_dim]
+                + np.cos(theta) * X[:, dim]
+            )
+        else:
+            v = np.zeros(self.ndim)
+            v[self.timelike_dim], v[dim] = np.sin(theta), np.cos(theta)
+            return X @ self._normal(dim, theta)
 
     def _get_split(self, X, dim, theta):
         """Get the indices of the split"""
-        prods = X @ self._normal(dim=dim, theta=theta)
-        return prods < 0, prods >= 0
+        p = self._dot(X, dim, theta)
+        return p < 0, p >= 0
 
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
@@ -224,8 +232,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _left(self, x, node):
         """Boolean: Go left?"""
-        v = self._normal(node.feature, node.theta)
-        return x @ v < 0.0
+        return self._dot(x, node.feature, node.theta) < 0
 
 
 class DecisionTreeRegressor(DecisionTreeClassifier):
