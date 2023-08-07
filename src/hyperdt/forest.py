@@ -21,7 +21,6 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         min_samples_split=2,
         min_samples_leaf=1,
         min_dist=0,
-        hyperbolic=True,
         criterion="gini",
         n_jobs=-1,
         timelike_dim=0,
@@ -30,7 +29,6 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
-        self.hyperbolic = hyperbolic
         self.min_dist = min_dist
         self.criterion = criterion
         self.timelike_dim = timelike_dim
@@ -40,7 +38,6 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
                 min_samples_split=min_samples_split,
                 min_samples_leaf=min_samples_leaf,
                 min_dist=min_dist,
-                hyperbolic=hyperbolic,
                 criterion=criterion,
                 timelike_dim=timelike_dim,
             )
