@@ -89,7 +89,7 @@ def generate_gaussian_mixture_hyperboloid(
     points = hyp.metric.exp(tangent_vecs, base_point=origin)
 
     # Throw out off-manifold points
-    keep2 = hyp.belongs(points)
+    keep2 = hyp.metric.squared_norm(points) == -1
     points = points[keep2]
     labels = labels[keep2]
 
