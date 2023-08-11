@@ -77,18 +77,20 @@ def generate_gaussian_mixture_hyperboloid(
         points[i] = np.random.multivariate_normal(means[c], covs[c])
 
     # Make manifold
-    hyperbolic = Hyperbolic(dim=n_dim, default_coords_type=default_coords_type)
+    hyp = Hyperbolic(dim=n_dim, default_coords_type=default_coords_type)
 
     # Make tangent vectors; take exp map
     origin = np.zeros(n_dim + 1)
     origin[0] = 1.0
-    tangent_vecs = hyperbolic.to_tangent(points, base_point=origin)
-    tangent_vecs = tangent_vecs[np.linalg.norm(tangent_vecs, axis=1) > 0.0]
-    points = hyperbolic.metric.exp(tangent_vecs, base_point=origin)
+    tangent_vecs = hyp.to_tangent(points, base_point=origin)
+    keep1 = hyp.metric.squared_norm(tangent_vecs) != 0
+    tangent_vecs = tangent_vecs[keep1]
+    labels = labels[keep1]
+    points = hyp.metric.exp(tangent_vecs, base_point=origin)
 
     # Throw out off-manifold points
-    keep = hyperbolic.belongs(points)
-    points = points[keep]
-    labels = labels[keep]
+    keep2 = hyp.belongs(points)
+    points = points[keep2]
+    labels = labels[keep2]
 
     return points, labels
