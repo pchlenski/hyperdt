@@ -1,51 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from scipy.optimize import newton
 from scipy.interpolate import interp1d
 
 from .conversions import convert
-
-
-def _find_intersection(D, theta, t, t_dim=1, n_dim=3):
-    """Get point on the intersection of a hyperplane and a hyperboloid."""
-    # Define the hyperplane equation
-    def hyperplane(x0, xD):
-        # return x0 * np.sin(theta) + xD * np.cos(theta)
-        return x0 * np.cos(theta) + xD * np.sin(theta)
-
-    # Define the hyperboloid equation: assume all other coordinates are 0
-    def hyperboloid_simplified(x0, x1, xD):
-        return x1 ** 2 + xD ** 2 - x0 ** 2 + 1
-
-    # Solve for x_0 using the hyperplane equation
-    def solve_x0(xD):
-        # return -xD / np.tan(thet/a)
-        return -xD * np.tan(theta)
-
-    # Substitute x_0 into the hyperboloid equation and solve for x_D
-    def equation_to_solve(xD):
-        return hyperboloid_simplified(x0=solve_x0(xD), x1=t, xD=xD)
-
-    # Input validation:
-    if D == t_dim:
-        raise ValueError("dim and t_dim must be different")
-
-    xD_solution = newton(equation_to_solve, 0)
-    x0_solution = solve_x0(xD_solution)
-
-    # return x_0_solution, x_D_solution, t
-    out_vec = np.zeros(n_dim)
-    out_vec[t_dim] = t
-    # if theta < 0:
-    if theta > np.pi / 2:
-        out_vec[0] = x0_solution
-        out_vec[D] = xD_solution
-    else:
-        out_vec[0] = -x0_solution
-        out_vec[D] = -xD_solution
-
-    return out_vec
 
 
 def _get_geodesic(
@@ -53,29 +11,12 @@ def _get_geodesic(
     theta,
     t_dim=1,
     n_dim=3,
-    start_t=-100,
-    end_t=100,
+    start_t=-10,
+    end_t=10,
     num_points=1000,
     geometry="poincare",
     timelike_dim=0,
 ):
-    # """Get num_points points from intersection of a hyperplane and a geodesic."""
-    # geodesic = np.stack(
-    #     [
-    #         _find_intersection(dim, theta, t, t_dim=t_dim, n_dim=n_dim)
-    #         for t in np.linspace(start_t, end_t, num_points)
-    #     ]
-    # )
-    # if geometry != "hyperboloid":
-    #     return convert(
-    #         geodesic,
-    #         initial="hyperboloid",
-    #         final=geometry,
-    #         timelike_dim=timelike_dim,
-    #     )
-    # else:
-    #     return geodesic
-
     """Get num_points points from intersection of a hyperplane and a geodesic."""
     _t = np.linspace(start_t, end_t, num_points)
     geodesic = np.zeros((num_points, n_dim))
@@ -83,11 +24,10 @@ def _get_geodesic(
     # t dimension just gets sinh
     geodesic[:, t_dim] = np.sinh(_t)
 
-    # These dimensions are more complicated:
     # Coefficient stretches unit vector to hit the manifold
     coef = np.sqrt(-1 / np.cos(2 * theta))  # sqrt(-sec(2 theta))
-    geodesic[:, dim] = np.cosh(_t) * coef * np.sin(theta)
-    geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.cos(theta)
+    geodesic[:, dim] = np.cosh(_t) * coef * np.cos(theta)
+    geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.sin(theta)
 
     return convert(
         geodesic,
