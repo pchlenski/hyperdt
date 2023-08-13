@@ -59,22 +59,42 @@ def _get_geodesic(
     geometry="poincare",
     timelike_dim=0,
 ):
+    # """Get num_points points from intersection of a hyperplane and a geodesic."""
+    # geodesic = np.stack(
+    #     [
+    #         _find_intersection(dim, theta, t, t_dim=t_dim, n_dim=n_dim)
+    #         for t in np.linspace(start_t, end_t, num_points)
+    #     ]
+    # )
+    # if geometry != "hyperboloid":
+    #     return convert(
+    #         geodesic,
+    #         initial="hyperboloid",
+    #         final=geometry,
+    #         timelike_dim=timelike_dim,
+    #     )
+    # else:
+    #     return geodesic
+
     """Get num_points points from intersection of a hyperplane and a geodesic."""
-    geodesic = np.stack(
-        [
-            _find_intersection(dim, theta, t, t_dim=t_dim, n_dim=n_dim)
-            for t in np.linspace(start_t, end_t, num_points)
-        ]
+    _t = np.linspace(start_t, end_t, num_points)
+    geodesic = np.zeros((num_points, n_dim))
+
+    # t dimension just gets sinh
+    geodesic[:, t_dim] = np.sinh(_t)
+
+    # These dimensions are more complicated:
+    # Coefficient stretches unit vector to hit the manifold
+    coef = np.sqrt(-1 / np.cos(2 * theta))  # sqrt(-sec(2 theta))
+    geodesic[:, dim] = np.cosh(_t) * coef * np.sin(theta)
+    geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.cos(theta)
+
+    return convert(
+        geodesic,
+        initial="hyperboloid",
+        final=geometry,
+        timelike_dim=timelike_dim,
     )
-    if geometry != "hyperboloid":
-        return convert(
-            geodesic,
-            initial="hyperboloid",
-            final=geometry,
-            timelike_dim=timelike_dim,
-        )
-    else:
-        return geodesic
 
 
 def _get_mask(boundary_dim, geodesic):
