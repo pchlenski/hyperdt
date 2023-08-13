@@ -81,6 +81,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
                     if score > best_score:
                         best_dim, best_theta, best_score = dim, theta, score
 
+        # Fallback case:
+        if best_score == -1:
+            value, probs = self._leaf_values(y)
+            return DecisionNode(value=value, probs=probs)
+
         # Populate:
         node = DecisionNode(feature=best_dim, theta=best_theta)
         node.score = best_score
@@ -150,7 +155,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def __init__(
         self,
-        candidates="grid",
+        candidates="data",
         min_dist=0.0,
         timelike_dim=0,
         sparse_dot_product=True,
@@ -166,15 +171,15 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
         if self.sparse_dot_product and X.ndim == 1:
-            return np.sin(theta) * X[self.timelike_dim] + np.cos(theta) * X[dim]
+            return np.cos(theta) * X[self.timelike_dim] + np.sin(theta) * X[dim]
         elif self.sparse_dot_product:
             return (
-                np.sin(theta) * X[:, self.timelike_dim]
-                + np.cos(theta) * X[:, dim]
+                np.cos(theta) * X[:, self.timelike_dim]
+                + np.sin(theta) * X[:, dim]
             )
         else:
             v = np.zeros(self.ndim)
-            v[self.timelike_dim], v[dim] = np.sin(theta), np.cos(theta)
+            v[self.timelike_dim], v[dim] = np.cos(theta), np.sin(theta)
             return X @ self._normal(dim, theta)
 
     def _get_split(self, X, dim, theta):
@@ -185,18 +190,20 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
             X[:, dim][X[:, dim] == 0.0] = 1e-6
-            # thetas = np.arctan(X[:, self.timelike_dim] / X[:, dim])
             thetas = np.arctan2(X[:, self.timelike_dim], X[:, dim])
-            thetas = np.unique(np.sort(thetas))
+            thetas[thetas < np.pi / 4] += 2 * np.pi
+            thetas = np.unique(thetas)
 
             # Keep only those that are sufficiently far apart; take midpoints:
             if self.min_dist > 0:
                 thetas = thetas[
                     np.where(np.abs(np.diff(thetas)) > self.min_dist)[0]
                 ]
-            return (thetas[:-1] + thetas[1:]) / 2.0
+            candidates = (thetas[:-1] + thetas[1:]) / 2.0
+            return candidates
+
         elif self.candidates == "grid":
-            return np.linspace(-np.pi / 4, np.pi / 4, 1000)
+            return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
 
     def _validate_hyperbolic(self, X):
         """Ensure points lie on a hyperboloid - subtract timelike twice from sum

@@ -11,7 +11,8 @@ def _find_intersection(D, theta, t, t_dim=1, n_dim=3):
     """Get point on the intersection of a hyperplane and a hyperboloid."""
     # Define the hyperplane equation
     def hyperplane(x0, xD):
-        return x0 * np.sin(theta) + xD * np.cos(theta)
+        # return x0 * np.sin(theta) + xD * np.cos(theta)
+        return x0 * np.cos(theta) + xD * np.sin(theta)
 
     # Define the hyperboloid equation: assume all other coordinates are 0
     def hyperboloid_simplified(x0, x1, xD):
@@ -19,7 +20,8 @@ def _find_intersection(D, theta, t, t_dim=1, n_dim=3):
 
     # Solve for x_0 using the hyperplane equation
     def solve_x0(xD):
-        return -xD / np.tan(theta)
+        # return -xD / np.tan(thet/a)
+        return -xD * np.tan(theta)
 
     # Substitute x_0 into the hyperboloid equation and solve for x_D
     def equation_to_solve(xD):
@@ -35,7 +37,8 @@ def _find_intersection(D, theta, t, t_dim=1, n_dim=3):
     # return x_0_solution, x_D_solution, t
     out_vec = np.zeros(n_dim)
     out_vec[t_dim] = t
-    if theta < 0:
+    # if theta < 0:
+    if theta > np.pi / 2:
         out_vec[0] = x0_solution
         out_vec[D] = xD_solution
     else:
@@ -63,12 +66,15 @@ def _get_geodesic(
             for t in np.linspace(start_t, end_t, num_points)
         ]
     )
-    return convert(
-        geodesic,
-        initial="hyperboloid",
-        final=geometry,
-        timelike_dim=timelike_dim,
-    )
+    if geometry != "hyperboloid":
+        return convert(
+            geodesic,
+            initial="hyperboloid",
+            final=geometry,
+            timelike_dim=timelike_dim,
+        )
+    else:
+        return geodesic
 
 
 def _get_mask(boundary_dim, geodesic):
@@ -92,7 +98,8 @@ def _get_mask(boundary_dim, geodesic):
 
 
 def plot_boundary(
-    hdt_node,
+    boundary_dim,
+    boundary_theta,
     t_dim=None,
     geometry="poincare",
     ax=None,
@@ -102,10 +109,6 @@ def plot_boundary(
     return_mask=False,
 ):
     """Plot decision boundaries of a hyperbolic decision tree"""
-    # Get decision boundary parameters
-    boundary_dim = hdt_node.feature
-    boundary_theta = hdt_node.theta
-
     # Set t_dim: we assume total number of dims is 3
     if t_dim is None:
         dims = [0, 1, 2]
@@ -174,7 +177,8 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, **kwargs):
         return ax
     else:
         ax, new_mask = plot_boundary(
-            node,
+            boundary_dim=node.feature,
+            boundary_theta=node.theta,
             color=colors[depth],
             mask=mask,
             return_mask=True,
