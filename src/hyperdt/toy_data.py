@@ -83,14 +83,19 @@ def generate_gaussian_mixture_hyperboloid(
     origin = np.zeros(n_dim + 1)
     origin[0] = 1.0
     tangent_vecs = hyp.to_tangent(points, base_point=origin)
-    keep1 = hyp.metric.squared_norm(tangent_vecs) != 0
+    keep1 = not np.isclose(hyp.metric.squared_norm(tangent_vecs), 0.0)
     tangent_vecs = tangent_vecs[keep1]
     labels = labels[keep1]
     points = hyp.metric.exp(tangent_vecs, base_point=origin)
 
     # Throw out off-manifold points
-    keep2 = hyp.metric.squared_norm(points) == -1
+    keep2 = np.isclose(hyp.metric.squared_norm(points), -1)
     points = points[keep2]
     labels = labels[keep2]
+
+    # Finally, ensure timelike > norm(spacelike):
+    keep3 = points[:, 0] > np.linalg.norm(points[:, 1:], axis=1)
+    points = points[keep3]
+    labels = labels[keep3]
 
     return points, labels

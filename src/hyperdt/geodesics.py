@@ -13,16 +13,6 @@ def _B(u, v):
     return -u[0] * v[0] + np.dot(u[1:], v[1:])
 
 
-def _normal_vector(x):
-    """Normal vector to the hyperboloid at point x"""
-    return np.concatenate([[-2 * x[0]], 2 * x[1:]])
-
-
-def _project_to_tangent_plane(v, normal):
-    """Project vector v to the tangent plane at point x"""
-    return v - (np.dot(v, normal) / np.dot(normal, normal)) * normal
-
-
 def _compute_x_u(p1, p2):
     """
     Given points p1 and p2 on the hyperboloid, compute x and u such that:
@@ -35,11 +25,20 @@ def _compute_x_u(p1, p2):
     Based on HGCN paper:
     https://proceedings.neurips.cc/paper_files/paper/2019/file/0415740eaa4d9decbc8da001d3fd805f-Paper.pdf
     """
+    # x is simply p1
     x = p1
-    direction = p2 - p1
-    normal = _normal_vector(x)
-    u = _project_to_tangent_plane(direction, normal)
-    u /= np.sqrt(_B(u, u))
+
+    # Compute the tangent vector from p1 to p2
+    v = p2 - p1
+
+    # Project the tangent vector onto the tangent space at x
+    normal = np.concatenate([[-2 * x[0]], 2 * x[1:]])
+    u = v - _B(v, normal) * normal / _B(normal, normal)
+
+    # Scale u to be unit-speed according to B
+    print("BILINEAR", _B(u, u))
+    u /= np.sqrt(abs(_B(u, u)))
+
     return x, u
 
 
