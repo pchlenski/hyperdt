@@ -17,7 +17,13 @@ def _get_geodesic(
     geometry="poincare",
     timelike_dim=0,
 ):
-    """Get num_points points from intersection of a hyperplane and a geodesic."""
+    """
+    Get num_points points from intersection of a hyperplane and a geodesic.
+
+    This is a special case when we have axis-aligned hyperplanes parametrized
+    by a single dimension and angle. The more general case is in the
+    'geodesics.py' submodule.
+    """
     _t = np.linspace(start_t, end_t, num_points)
     geodesic = np.zeros((num_points, n_dim))
 
@@ -38,7 +44,13 @@ def _get_geodesic(
 
 
 def _get_mask(boundary_dim, geodesic):
-    """Return all points such that <x, boundary> < 0 (left side of boundary)"""
+    """
+    Return all points such that <x, boundary> < 0 (left side of boundary).
+
+    This is used to restrict where decision boundaries are plotted, so that
+    we can visualize boundaries only where they are actually relevant (e.g. if
+    you're on the right side of split 1, don't plot split 2 in the left half)
+    """
     _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
 
     # Interpolate geodesic as a function of the independent dimension
