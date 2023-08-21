@@ -83,7 +83,7 @@ def generate_gaussian_mixture_hyperboloid(
     origin = np.zeros(n_dim + 1)
     origin[0] = 1.0
     tangent_vecs = hyp.to_tangent(points, base_point=origin)
-    keep1 = not np.isclose(hyp.metric.squared_norm(tangent_vecs), 0.0)
+    keep1 = ~np.isclose(hyp.metric.squared_norm(tangent_vecs), 0.0)
     tangent_vecs = tangent_vecs[keep1]
     labels = labels[keep1]
     points = hyp.metric.exp(tangent_vecs, base_point=origin)

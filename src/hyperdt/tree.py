@@ -3,6 +3,7 @@
 import numpy as np
 from warnings import warn
 from sklearn.base import BaseEstimator, ClassifierMixin
+from .hyperbolic_trig import get_candidates_hyperbolic
 
 
 class DecisionNode:
@@ -154,33 +155,32 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def __init__(
-        self,
-        candidates="data",
-        min_dist=0.0,
-        timelike_dim=0,
-        sparse_dot_product=True,
-        **kwargs
+        self, candidates="data", timelike_dim=0, dot_product="sparse", **kwargs
     ):
         super().__init__(**kwargs)
         self.candidates = candidates
-        self.min_dist = min_dist
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
-        self.sparse_dot_product = sparse_dot_product
+        self.dot_product = dot_product
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
-        if self.sparse_dot_product and X.ndim == 1:
-            return np.cos(theta) * X[self.timelike_dim] + np.sin(theta) * X[dim]
-        elif self.sparse_dot_product:
+        if self.dot_product == "sparse":
             return (
                 np.cos(theta) * X[:, self.timelike_dim]
                 + np.sin(theta) * X[:, dim]
             )
-        else:
+        elif self.dot_product == "dense":
             v = np.zeros(self.ndim)
             v[self.timelike_dim], v[dim] = np.cos(theta), np.sin(theta)
-            return X @ self._normal(dim, theta)
+            return X @ v
+        elif self.dot_product == "sparse_minkowski":
+            return (
+                np.sin(theta) * X[:, dim]
+                - np.sin(theta) * X[:, self.timelike_dim]
+            )
+        else:
+            raise ValueError("Invalid dot product")
 
     def _get_split(self, X, dim, theta):
         """Get the indices of the split"""
@@ -189,18 +189,9 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
-            X[:, dim][X[:, dim] == 0.0] = 1e-6
-            thetas = np.arctan2(X[:, self.timelike_dim], X[:, dim])
-            thetas[thetas < np.pi / 4] += 2 * np.pi
-            thetas = np.unique(thetas)
-
-            # Keep only those that are sufficiently far apart; take midpoints:
-            if self.min_dist > 0:
-                thetas = thetas[
-                    np.where(np.abs(np.diff(thetas)) > self.min_dist)[0]
-                ]
-            candidates = (thetas[:-1] + thetas[1:]) / 2.0
-            return candidates
+            return get_candidates_hyperbolic(
+                X=X, dim=dim, timelike_dim=self.timelike_dim
+            )
 
         elif self.candidates == "grid":
             return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
@@ -241,7 +232,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _left(self, x, node):
         """Boolean: Go left?"""
-        return self._dot(x, node.feature, node.theta) < 0
+        return self._dot(x.reshape(1, -1), node.feature, node.theta).item() < 0
 
 
 class DecisionTreeRegressor(DecisionTreeClassifier):
