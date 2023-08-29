@@ -4,37 +4,37 @@ import numpy as np
 from geomstats.geometry.hyperbolic import Hyperbolic
 
 
-def _project_to_hyperboloid(points: np.ndarray) -> np.ndarray:
-    """Take points in ambient space and project them onto the hyperboloid"""
-    points[:, 0] = np.sqrt(1.0 + np.sum(points[:, 1:] ** 2, axis=1))
-    return points
+# def _project_to_hyperboloid(points: np.ndarray) -> np.ndarray:
+#     """Take points in ambient space and project them onto the hyperboloid"""
+#     points[:, 0] = np.sqrt(1.0 + np.sum(points[:, 1:] ** 2, axis=1))
+#     return points
 
 
-def generate_points_on_branch(
-    root: np.ndarray,
-    direction: np.ndarray,
-    num_points: int,
-    noise_std: float = 0.0,
-) -> np.ndarray:
-    """Generate points along a geodesic branch in the hyperboloid model"""
+# def generate_points_on_branch(
+#     root: np.ndarray,
+#     direction: np.ndarray,
+#     num_points: int,
+#     noise_std: float = 0.0,
+# ) -> np.ndarray:
+#     """Generate points along a geodesic branch in the hyperboloid model"""
 
-    # Normalize direction vector
-    direction = direction / np.linalg.norm(direction)
+#     # Normalize direction vector
+#     direction = direction / np.linalg.norm(direction)
 
-    # Randomly sample distances from the root
-    distances = np.random.uniform(0.0, 1.0, size=num_points)
+#     # Randomly sample distances from the root
+#     distances = np.random.uniform(0.0, 1.0, size=num_points)
 
-    # Generate points along the geodesic - use outer product
-    points = root + np.outer(distances, direction)
+#     # Generate points along the geodesic - use outer product
+#     points = root + np.outer(distances, direction)
 
-    # Add noise
-    if noise_std > 0.0:
-        points += np.random.normal(scale=noise_std, size=points.shape)
+#     # Add noise
+#     if noise_std > 0.0:
+#         points += np.random.normal(scale=noise_std, size=points.shape)
 
-    # Project onto the hyperboloid
-    points = _project_to_hyperboloid(points)
+#     # Project onto the hyperboloid
+#     points = _project_to_hyperboloid(points)
 
-    return points
+#     return points
 
 
 def generate_gaussian_mixture_hyperboloid(
@@ -99,3 +99,92 @@ def generate_gaussian_mixture_hyperboloid(
     labels = labels[keep3]
 
     return points, labels
+
+
+def wrapped_normal_mixture(
+    num_points: int,
+    num_classes: int,
+    noise_std: float = 1.0,
+    n_dim: int = 2,
+    default_coords_type: str = "extrinsic",
+    seed: int = None,
+) -> np.ndarray:
+    """Generate points from a mixture of Gaussians on the hyperboloid"""
+
+    # Set seed
+    if seed is not None:
+        np.random.seed(seed)
+
+    # Make manifold
+    hyp = Hyperbolic(dim=n_dim, default_coords_type=default_coords_type)
+    origin = np.array([1.0] + [0.0] * n_dim)
+
+    # Generate random means; parallel transport from origin
+    means = np.concatenate(
+        [
+            np.zeros(shape=(num_classes, 1)),
+            np.random.normal(size=(num_classes, n_dim)),
+        ],
+        axis=1,
+    )
+    means = hyp.metric.exp(tangent_vec=means, base_point=origin)
+
+    # Generate random covariance matrices
+    covs = np.zeros((num_classes, n_dim, n_dim))
+    for i in range(num_classes):
+        covs[i] = np.random.normal(size=(n_dim, n_dim))
+        covs[i] = covs[i] @ covs[i].T
+    covs = noise_std * covs
+
+    # Generate random class probabilities
+    probs = np.random.uniform(size=num_classes)
+    probs = probs / np.sum(probs)
+
+    # Generate points
+    # points = np.zeros((num_points, n_dim + 1))
+    # labels = np.zeros(num_points, dtype=int)
+    # for i in range(num_points):
+    #     # Sample class
+    #     c = np.random.choice(num_classes, p=probs)
+    #     labels[i] = c
+
+    #     # Sample point as a vector in the tangent space at origin
+    #     tangent_vec = np.concatenate(
+    #         [[0.0], np.random.multivariate_normal(np.zeros(n_dim), covs[c])]
+    #     )
+
+    #     # Parallel transport to tangent plane at mean for class c
+    #     tangent_vec_transported = hyp.metric.parallel_transport(
+    #         tangent_vec=tangent_vec, base_point=origin, end_point=means[c]
+    #     )
+
+    #     # Exponential map to hyperboloid
+    #     point_mapped = hyp.metric.exp(
+    #         tangent_vec=tangent_vec_transported, base_point=means[c]
+    #     )
+
+    #     # Add to points
+    #     points[i] = point_mapped
+
+    # First, determine class assignments
+    classes = np.random.choice(num_classes, size=num_points, p=probs)
+
+    # Sample the appropriate covariance matrix and make tangent vectors
+    vecs = [
+        np.random.multivariate_normal(np.zeros(n_dim), covs[c]) for c in classes
+    ]
+    tangent_vecs = np.concatenate(
+        [np.zeros(shape=(num_points, 1)), vecs], axis=1
+    )
+
+    # Transport each tangent vector to its corresponding mean on the hyperboloid
+    tangent_vecs_transported = hyp.metric.parallel_transport(
+        tangent_vec=tangent_vecs, base_point=origin, end_point=means[classes]
+    )
+
+    # Exponential map to hyperboloid at the class mean
+    points = hyp.metric.exp(
+        tangent_vec=tangent_vecs_transported, base_point=means[classes]
+    )
+
+    return points, classes
