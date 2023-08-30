@@ -16,13 +16,13 @@ def _get_geodesic(
     num_points=1000,
     geometry="poincare",
     timelike_dim=0,
+    product="sparse",
 ):
     """
     Get num_points points from intersection of a hyperplane and a geodesic.
 
-    This is a special case when we have axis-aligned hyperplanes parametrized
-    by a single dimension and angle. The more general case is in the
-    'geodesics.py' submodule.
+    This is a special case when we have axis-aligned hyperplanes parameterized by a
+    single dimension and angle. The more general case is in 'geodesics.py'.
     """
     _t = np.linspace(start_t, end_t, num_points)
     geodesic = np.zeros((num_points, n_dim))
@@ -33,7 +33,10 @@ def _get_geodesic(
     # Coefficient stretches unit vector to hit the manifold
     coef = np.sqrt(-1 / np.cos(2 * theta))  # sqrt(-sec(2 theta))
     geodesic[:, dim] = np.cosh(_t) * coef * np.cos(theta)
-    geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.sin(theta)
+    if product == "sparse_minkowski":
+        geodesic[:, timelike_dim] = -np.cosh(_t) * coef * np.sin(theta)
+    else:
+        geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.sin(theta)
 
     return convert(
         geodesic,
@@ -43,13 +46,13 @@ def _get_geodesic(
     )
 
 
-def _get_mask(boundary_dim, geodesic):
+def _get_mask(boundary_dim, geodesic, product="sparse"):
     """
     Return all points such that <x, boundary> < 0 (left side of boundary).
 
-    This is used to restrict where decision boundaries are plotted, so that
-    we can visualize boundaries only where they are actually relevant (e.g. if
-    you're on the right side of split 1, don't plot split 2 in the left half)
+    This is used to restrict where decision boundaries are plotted, so that we can
+    visualize boundaries only where they are actually relevant (e.g. if you're on the
+    right side of split 1, don't plot split 2 in the left half)
     """
     _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
 
@@ -66,7 +69,10 @@ def _get_mask(boundary_dim, geodesic):
     mask = _xx < geodesic_boundary
     if boundary_dim == 1:
         mask = mask.T
-    return mask
+    if product == "sparse_minkowski":
+        return ~mask
+    else:
+        return mask
 
 
 def plot_boundary(
@@ -79,6 +85,7 @@ def plot_boundary(
     color="red",
     mask=None,
     return_mask=False,
+    product="sparse",
 ):
     """Plot decision boundaries of a hyperbolic decision tree"""
     # Set t_dim: we assume total number of dims is 3
@@ -95,10 +102,13 @@ def plot_boundary(
         geometry=geometry,
         t_dim=t_dim,
         timelike_dim=timelike_dim,
+        product=product,
     )
 
     # Get new mask
-    new_mask = _get_mask(boundary_dim=boundary_dim, geodesic=geodesic_points)
+    new_mask = _get_mask(
+        boundary_dim=boundary_dim, geodesic=geodesic_points, product=product
+    )
 
     # Apply mask to geodesic points
     if mask is not None:

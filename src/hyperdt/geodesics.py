@@ -4,7 +4,7 @@ import numpy as np
 def generate_hyperboloid_points(n_points=2, n_dim=3):
     """Generate some random points on a hyperboloid such that B(x, x) = -1"""
     points = np.random.rand(n_points, n_dim)
-    x0 = np.sqrt(1 + np.sum(points ** 2, axis=1))
+    x0 = np.sqrt(1 + np.sum(points**2, axis=1))
     return np.column_stack((-x0, points))  # np.stack is finnicky
 
 
