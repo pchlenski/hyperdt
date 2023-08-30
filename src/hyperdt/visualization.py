@@ -5,6 +5,8 @@ from scipy.interpolate import interp1d
 
 from .conversions import convert
 
+GRID_SIZE = 2001
+
 
 def _get_geodesic(
     dim,
@@ -16,7 +18,6 @@ def _get_geodesic(
     num_points=1000,
     geometry="poincare",
     timelike_dim=0,
-    product="sparse",
 ):
     """
     Get num_points points from intersection of a hyperplane and a geodesic.
@@ -33,10 +34,7 @@ def _get_geodesic(
     # Coefficient stretches unit vector to hit the manifold
     coef = np.sqrt(-1 / np.cos(2 * theta))  # sqrt(-sec(2 theta))
     geodesic[:, dim] = np.cosh(_t) * coef * np.cos(theta)
-    if product == "sparse_minkowski":
-        geodesic[:, timelike_dim] = -np.cosh(_t) * coef * np.sin(theta)
-    else:
-        geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.sin(theta)
+    geodesic[:, timelike_dim] = np.cosh(_t) * coef * np.sin(theta)
 
     return convert(
         geodesic,
@@ -46,7 +44,7 @@ def _get_geodesic(
     )
 
 
-def _get_mask(boundary_dim, geodesic, product="sparse"):
+def _get_mask(boundary_dim, geodesic):
     """
     Return all points such that <x, boundary> < 0 (left side of boundary).
 
@@ -54,7 +52,9 @@ def _get_mask(boundary_dim, geodesic, product="sparse"):
     visualize boundaries only where they are actually relevant (e.g. if you're on the
     right side of split 1, don't plot split 2 in the left half)
     """
-    _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
+    _xx, _yy = np.meshgrid(
+        np.linspace(-1, 1, GRID_SIZE), np.linspace(-1, 1, GRID_SIZE)
+    )
 
     # Interpolate geodesic as a function of the independent dimension
     boundary_dim = boundary_dim - 1  # Input is {1, 2} but want {0, 1}
@@ -69,10 +69,7 @@ def _get_mask(boundary_dim, geodesic, product="sparse"):
     mask = _xx < geodesic_boundary
     if boundary_dim == 1:
         mask = mask.T
-    if product == "sparse_minkowski":
-        return ~mask
-    else:
-        return mask
+    return mask
 
 
 def plot_boundary(
@@ -85,7 +82,6 @@ def plot_boundary(
     color="red",
     mask=None,
     return_mask=False,
-    product="sparse",
 ):
     """Plot decision boundaries of a hyperbolic decision tree"""
     # Set t_dim: we assume total number of dims is 3
@@ -102,13 +98,10 @@ def plot_boundary(
         geometry=geometry,
         t_dim=t_dim,
         timelike_dim=timelike_dim,
-        product=product,
     )
 
     # Get new mask
-    new_mask = _get_mask(
-        boundary_dim=boundary_dim, geodesic=geodesic_points, product=product
-    )
+    new_mask = _get_mask(boundary_dim=boundary_dim, geodesic=geodesic_points)
 
     # Apply mask to geodesic points
     if mask is not None:
@@ -136,7 +129,9 @@ def plot_boundary(
         return ax
 
 
-def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, **kwargs):
+def _plot_tree_recursive(
+    node, ax, colors, mask, depth, n_classes, minkowski=False, **kwargs
+):
     """Plot the decision boundary of a node and its children recursively."""
     if node.value is not None:  # Leaf case
         _xx, _yy = np.meshgrid(
@@ -160,9 +155,10 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, **kwargs):
         ax.imshow(image, origin="lower", extent=[-1, 1, -1, 1], aspect="auto")
         return ax
     else:
+        theta = -node.theta if minkowski else node.theta
         ax, new_mask = plot_boundary(
             boundary_dim=node.feature,
-            boundary_theta=node.theta,
+            boundary_theta=theta,
             color=colors[depth],
             mask=mask,
             return_mask=True,
@@ -174,6 +170,7 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, **kwargs):
             "colors": colors,
             "depth": depth + 1,
             "n_classes": n_classes,
+            "minkowski": minkowski,
             **kwargs,
         }
 
@@ -183,6 +180,10 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, **kwargs):
             mask_right = mask & ~new_mask
         else:
             mask_left = mask_right = None
+
+        # Negated angles = flipped dot-product = flipped mask
+        if minkowski:
+            mask_left, mask_right = mask_right, mask_left
 
         ax = _plot_tree_recursive(node.left, mask=mask_left, **reuse)
         ax = _plot_tree_recursive(node.right, mask=mask_right, **reuse)
@@ -255,6 +256,7 @@ def plot_tree(
         depth=0,
         mask=mask,
         n_classes=len(hdt.classes_),
+        minkowski=(hdt.dot_product == "sparse_minkowski"),
         **kwargs,
     )
     ax.legend(

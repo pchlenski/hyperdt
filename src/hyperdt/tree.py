@@ -195,7 +195,6 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
                 timelike_dim=self.timelike_dim,
                 dot_product=self.dot_product,
             )
-            return candidates
 
         elif self.candidates == "grid":
             return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
