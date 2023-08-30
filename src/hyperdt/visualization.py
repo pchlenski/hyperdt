@@ -138,13 +138,15 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, **kwargs):
         color = class_colors(majority_class)
 
         # Don't extend past unit circle
-        mask_circle = _xx ** 2 + _yy ** 2 <= 1
-        mask = mask & mask_circle
+        if mask is not None:
+            mask_circle = _xx**2 + _yy**2 <= 1
+            mask = mask & mask_circle
 
         # Make image
         image = np.zeros(shape=(2001, 2001, 4))
-        image[mask] = (color[0], color[1], color[2], 0.2)
-        image[~mask] = (0, 0, 0, 0)
+        if mask is not None:
+            image[mask] = (color[0], color[1], color[2], 0.2)
+            image[~mask] = (0, 0, 0, 0)
         ax.imshow(image, origin="lower", extent=[-1, 1, -1, 1], aspect="auto")
         return ax
     else:
@@ -212,7 +214,7 @@ def plot_tree(
 
     # Draw unit circle
     _x = np.linspace(-1, 1, 1000)
-    _y = np.sqrt(1 - _x ** 2)
+    _y = np.sqrt(1 - _x**2)
     ax.plot(_x, _y, c="black")
     ax.plot(_x, -_y, c="black")
 

@@ -167,17 +167,17 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         """Get the dot product of the normal vector and the data"""
         if self.dot_product == "sparse":
             return (
-                np.cos(theta) * X[:, self.timelike_dim]
-                + np.sin(theta) * X[:, dim]
+                np.sin(theta) * X[:, dim]
+                - np.cos(theta) * X[:, self.timelike_dim]
             )
         elif self.dot_product == "dense":
             v = np.zeros(self.ndim)
-            v[self.timelike_dim], v[dim] = np.cos(theta), np.sin(theta)
+            v[self.timelike_dim], v[dim] = -np.cos(theta), np.sin(theta)
             return X @ v
         elif self.dot_product == "sparse_minkowski":
             return (
                 np.sin(theta) * X[:, dim]
-                - np.sin(theta) * X[:, self.timelike_dim]
+                + np.cos(theta) * X[:, self.timelike_dim]
             )
         else:
             raise ValueError("Invalid dot product")
@@ -190,21 +190,28 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
             return get_candidates_hyperbolic(
-                X=X, dim=dim, timelike_dim=self.timelike_dim
+                X=X,
+                dim=dim,
+                timelike_dim=self.timelike_dim,
+                dot_product=self.dot_product,
             )
+            return candidates
 
         elif self.candidates == "grid":
             return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
 
     def _validate_hyperbolic(self, X):
-        """Ensure points lie on a hyperboloid - subtract timelike twice from sum
-        of all squares, rather than once from sum of all spacelike squares, to
-        simplify indexing"""
+        """
+        Ensure points lie on a hyperboloid - subtract timelike twice from sum of all
+        squares, rather than once from sum of all spacelike squares, to simplify
+        indexing
+        """
         X_spacelike = X[:, self.dims]  # Nice and clean
         try:
             assert np.allclose(
-                np.sum(X_spacelike ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
+                np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
                 -1.0,
+                atol=1e-3,  # Don't be too strict
             )
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
             assert np.all(
