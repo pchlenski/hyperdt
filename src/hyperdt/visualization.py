@@ -52,9 +52,7 @@ def _get_mask(boundary_dim, geodesic):
     visualize boundaries only where they are actually relevant (e.g. if you're on the
     right side of split 1, don't plot split 2 in the left half)
     """
-    _xx, _yy = np.meshgrid(
-        np.linspace(-1, 1, GRID_SIZE), np.linspace(-1, 1, GRID_SIZE)
-    )
+    _xx, _yy = np.meshgrid(np.linspace(-1, 1, GRID_SIZE), np.linspace(-1, 1, GRID_SIZE))
 
     # Interpolate geodesic as a function of the independent dimension
     boundary_dim = boundary_dim - 1  # Input is {1, 2} but want {0, 1}
@@ -119,9 +117,7 @@ def plot_boundary(
     if np.all(np.linalg.norm(geodesic_points, axis=1) <= 1):
         ax.plot(geodesic_points[:, 0], geodesic_points[:, 1], c=color)
     else:
-        print(
-            f"Geodesic points lie outside unit circle:\t{boundary_dim} {boundary_theta/np.pi:.3f}*pi {t_dim}"
-        )
+        print(f"Geodesic points lie outside unit circle:\t{boundary_dim} {boundary_theta/np.pi:.3f}*pi {t_dim}")
 
     if return_mask:
         return ax, new_mask
@@ -129,14 +125,10 @@ def plot_boundary(
         return ax
 
 
-def _plot_tree_recursive(
-    node, ax, colors, mask, depth, n_classes, minkowski=False, **kwargs
-):
+def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, minkowski=False, **kwargs):
     """Plot the decision boundary of a node and its children recursively."""
     if node.value is not None:  # Leaf case
-        _xx, _yy = np.meshgrid(
-            np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001)
-        )
+        _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
         # Match scatterplot colors
         majority_class = node.value
         class_colors = plt.get_cmap("Paired", n_classes)
@@ -218,10 +210,12 @@ def plot_tree(
     geometry="poincare",
     timelike_dim=0,
     masked=True,
+    ax=None,
     **kwargs,
 ):
     """Plot data and all decision boundaries of a hyperbolic decision tree."""
-    fig, ax = plt.subplots(figsize=(10, 10))
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 10))
 
     # Draw unit circle
     _x = np.linspace(-1, 1, 1000)
@@ -231,9 +225,7 @@ def plot_tree(
 
     # Plot data
     if X is not None and y is not None:
-        X = convert(
-            X, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim
-        )
+        X = convert(X, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim)
         ax.scatter(X[:, 0], X[:, 1], c=y, cmap="Paired")
 
     # Get colors
@@ -259,12 +251,7 @@ def plot_tree(
         minkowski=(hdt.dot_product == "sparse_minkowski"),
         **kwargs,
     )
-    ax.legend(
-        handles=[
-            plt.Line2D([0], [0], color=c, label=f"Depth {i}")
-            for i, c in enumerate(colors)
-        ]
-    )
+    ax.legend(handles=[plt.Line2D([0], [0], color=c, label=f"Depth {i}") for i, c in enumerate(colors)])
 
     # Set axis limits
     ax.set_xlim([-1.1, 1.1])
