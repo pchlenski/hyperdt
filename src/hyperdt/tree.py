@@ -23,12 +23,14 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         min_samples_leaf=1,
         min_samples_split=2,
         criterion="gini",  # 'gini', 'entropy', or 'misclassification'
+        weights=None,
     ):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
         self.tree = None
         self.criterion = criterion
+        self.weights = weights
 
         # Set loss
         if criterion == "gini":
@@ -40,7 +42,10 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def _gini(self, y):
         """Gini impurity"""
-        return 1 - np.sum(self._get_probs(y) ** 2)
+        if self.weights is not None:
+            return 1 - np.sum(self._get_probs(y) ** 2 * self.weights)
+        else:
+            return 1 - np.sum(self._get_probs(y) ** 2)
 
     def _information_gain(self, left, right, y):
         """Get the information gain from splitting on a given dimension"""
@@ -63,11 +68,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         """Recursively fit a node of the tree"""
 
         # Base case
-        if (
-            depth == self.max_depth
-            or len(y) <= self.min_samples_split
-            or len(np.unique(y)) == 1
-        ):
+        if depth == self.max_depth or len(y) <= self.min_samples_split or len(np.unique(y)) == 1:
             value, probs = self._leaf_values(y)
             return DecisionNode(value=value, probs=probs)
 
@@ -100,23 +101,21 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         probs = self._get_probs(y)
         return np.argmax(probs), probs
 
-    def _validate_labels(self, y):
-        try:
-            assert np.max(y) == len(self.classes_) - 1
-            assert np.min(y) == 0
-        except AssertionError:
-            raise ValueError("Labels must be integers from 0 to n_classes - 1")
-
     def fit(self, X, y):
         """Fit a decision tree to the data"""
 
         # Some attributes we need:
         self.ndim = X.shape[1]
         self.dims = list(range(self.ndim))
-        self.classes_ = np.unique(y)
+        self.classes_, y = np.unique(y, return_inverse=True)
+
+        # Weight classes
+        if self.weights == "balanced":
+            self.weights = 1 / np.bincount(y)
+            self.weights /= np.sum(self.weights)
 
         # Validate data and fit tree:
-        self._validate_labels(y)
+        # self.label_names, y = np.unique(y, return_inverse=True)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
@@ -134,15 +133,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         if node.value is not None:
             return node
 
-        return (
-            self._traverse(x, node.left)
-            if self._left(x, node)
-            else self._traverse(x, node.right)
-        )
+        return self._traverse(x, node.left) if self._left(x, node) else self._traverse(x, node.right)
 
     def predict(self, X):
         """Predict labels for samples in X"""
-        return np.array([self._traverse(x).value for x in X])
+        return np.array([self.classes_[self._traverse(x).value] for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
@@ -154,9 +149,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
-    def __init__(
-        self, candidates="data", timelike_dim=0, dot_product="sparse", **kwargs
-    ):
+    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", **kwargs):
         super().__init__(**kwargs)
         self.candidates = candidates
         self.timelike_dim = timelike_dim
@@ -166,19 +159,13 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
         if self.dot_product == "sparse":
-            return (
-                np.sin(theta) * X[:, dim]
-                - np.cos(theta) * X[:, self.timelike_dim]
-            )
+            return np.sin(theta) * X[:, dim] - np.cos(theta) * X[:, self.timelike_dim]
         elif self.dot_product == "dense":
             v = np.zeros(self.ndim)
             v[self.timelike_dim], v[dim] = -np.cos(theta), np.sin(theta)
             return X @ v
         elif self.dot_product == "sparse_minkowski":
-            return (
-                np.sin(theta) * X[:, dim]
-                + np.cos(theta) * X[:, self.timelike_dim]
-            )
+            return np.sin(theta) * X[:, dim] + np.cos(theta) * X[:, self.timelike_dim]
         else:
             raise ValueError("Invalid dot product")
 
@@ -213,9 +200,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
                 atol=1e-3,  # Don't be too strict
             )
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
-            assert np.all(
-                X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1)
-            )
+            assert np.all(X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1))
         except AssertionError:
             raise ValueError("Points must lie on a hyperboloid")
 
@@ -271,9 +256,7 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
 
 
-class HyperbolicDecisionTreeRegressor(
-    DecisionTreeRegressor, HyperbolicDecisionTreeClassifier
-):
+class HyperbolicDecisionTreeRegressor(DecisionTreeRegressor, HyperbolicDecisionTreeClassifier):
     """Hacky multiple inheritance constructor - seems to work though"""
 
     def __init__(self, **kwargs):

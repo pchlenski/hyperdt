@@ -10,40 +10,33 @@ from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
 
-from .tree import HyperbolicDecisionTreeClassifier
+from .tree import DecisionTreeClassifier, HyperbolicDecisionTreeClassifier
 
 
-class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
+class RandomForestClassifier(BaseEstimator, ClassifierMixin):
     def __init__(
         self,
         n_estimators=100,
         max_depth=3,
         min_samples_split=2,
         min_samples_leaf=1,
-        min_dist=0,
         criterion="gini",
+        weights=None,
         n_jobs=-1,
-        timelike_dim=0,
     ):
         self.n_estimators = n_estimators
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.min_samples_leaf = min_samples_leaf
-        self.min_dist = min_dist
-        self.criterion = criterion
-        self.timelike_dim = timelike_dim
-        self.trees = [
-            HyperbolicDecisionTreeClassifier(
-                max_depth=max_depth,
-                min_samples_split=min_samples_split,
-                min_samples_leaf=min_samples_leaf,
-                min_dist=min_dist,
-                criterion=criterion,
-                timelike_dim=timelike_dim,
-            )
-            for _ in range(n_estimators)
-        ]
+        self.tree_type = DecisionTreeClassifier
         self.n_jobs = n_jobs
+        self.tree_params = {}
+        self.max_depth = self.tree_params["max_depth"] = max_depth
+        self.min_samples_split = self.tree_params["min_samples_split"] = min_samples_split
+        self.min_samples_leaf = self.tree_params["min_samples_leaf"] = min_samples_leaf
+        self.criterion = self.tree_params["criterion"] = criterion
+        self.weights = self.tree_params["weights"] = weights
+        self.trees = self._get_trees()
+
+    def _get_trees(self):
+        return [self.tree_type(**self.tree_params) for _ in range(self.n_estimators)]
 
     def _generate_subsample(self, X, y):
         """Generate a random subsample of the data"""
@@ -59,8 +52,7 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
         trees = tqdm(self.trees) if use_tqdm else self.trees
         if self.n_jobs != 1:
             fitted_trees = Parallel(n_jobs=self.n_jobs)(
-                delayed(tree.fit)(*self._generate_subsample(X, y))
-                for tree in trees
+                delayed(tree.fit)(*self._generate_subsample(X, y)) for tree in trees
             )
             self.trees = fitted_trees
         else:
@@ -82,3 +74,10 @@ class HyperbolicRandomForestClassifier(BaseEstimator, ClassifierMixin):
     def score(self, X, y):
         """Return the mean accuracy on the given test data and labels"""
         return np.mean(self.predict(X) == y)
+
+
+class HyperbolicRandomForestClassifier(RandomForestClassifier):
+    def __init__(self, timelike_dim=0, **kwargs):
+        super().__init__(**kwargs)
+        self.timelike_dim = self.tree_params["timelike_dim"] = timelike_dim
+        self.tree_type = HyperbolicDecisionTreeClassifier
