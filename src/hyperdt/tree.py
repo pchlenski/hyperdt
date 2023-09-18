@@ -31,6 +31,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.tree = None
         self.criterion = criterion
         self.weights = weights
+        self.min_impurity_decrease = 0.0
 
         # Set loss
         if criterion == "gini":
@@ -80,7 +81,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
                 min_len = np.min([len(y[left]), len(y[right])])
                 if min_len >= self.min_samples_leaf:
                     score = self._information_gain(left, right, y)
-                    if score > best_score:
+                    if score >= best_score + self.min_impurity_decrease:
                         best_dim, best_theta, best_score = dim, theta, score
 
         # Fallback case:

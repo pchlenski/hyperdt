@@ -47,12 +47,8 @@ def wrapped_normal_mixture(
     classes = np.random.choice(num_classes, size=num_points, p=probs)
 
     # Sample the appropriate covariance matrix and make tangent vectors
-    vecs = [
-        np.random.multivariate_normal(np.zeros(n_dim), covs[c]) for c in classes
-    ]
-    tangent_vecs = np.concatenate(
-        [np.zeros(shape=(num_points, 1)), vecs], axis=1
-    )
+    vecs = [np.random.multivariate_normal(np.zeros(n_dim), covs[c]) for c in classes]
+    tangent_vecs = np.concatenate([np.zeros(shape=(num_points, 1)), vecs], axis=1)
 
     # Transport each tangent vector to its corresponding mean on the hyperboloid
     tangent_vecs_transported = hyp.metric.parallel_transport(
@@ -60,11 +56,7 @@ def wrapped_normal_mixture(
     )
 
     # Exponential map to hyperboloid at the class mean
-    tangent_vecs_transported = tangent_vecs_transported[
-        ~np.isclose(hyp.metric.norm(tangent_vecs_transported), 0)
-    ]
-    points = hyp.metric.exp(
-        tangent_vec=tangent_vecs_transported, base_point=means[classes]
-    )
+    tangent_vecs_transported = tangent_vecs_transported[~np.isclose(hyp.metric.norm(tangent_vecs_transported), 0)]
+    points = hyp.metric.exp(tangent_vec=tangent_vecs_transported, base_point=means[classes])
 
     return points, classes

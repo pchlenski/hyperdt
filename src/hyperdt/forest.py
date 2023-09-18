@@ -44,9 +44,12 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[indices], y[indices]
 
-    def fit(self, X, y, use_tqdm=False):
+    def fit(self, X, y, use_tqdm=False, seed=None):
         """Fit a decision tree to subsamples"""
         self.classes_ = np.unique(y)
+
+        if seed is not None:
+            np.random.seed(seed)
 
         # Fit decision trees individually (parallelized):
         trees = tqdm(self.trees) if use_tqdm else self.trees
