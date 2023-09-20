@@ -9,9 +9,9 @@ from .hyperbolic_trig import get_candidates_hyperbolic
 class DecisionNode:
     def __init__(self, value=None, probs=None, feature=None, theta=None):
         self.value = value
-        self.probs = probs # predicted class probabilities of all samples in the leaf
-        self.feature = feature # feature index
-        self.theta = theta # threshold
+        self.probs = probs  # predicted class probabilities of all samples in the leaf
+        self.feature = feature  # feature index
+        self.theta = theta  # threshold
         self.left = None
         self.right = None
 
@@ -195,7 +195,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         indexing
         """
         X_spacelike = X[:, self.dims]  # Nice and clean
-        
+
         try:
             assert np.allclose(
                 np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
@@ -203,17 +203,19 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
                 atol=1e-3,  # Don't be too strict
             )
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of -1.")
-        
+            raise ValueError("Points must lie on a hyperboloid: Minkowski norm does not equal the curvature of -1.")
+
         try:
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid: Timelike dimension must be greater than 1.")
-        
+            raise ValueError("Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1.")
+
         try:
             assert np.all(X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1))
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid: Timelike dimension must be greater than the norm of the spacelike dimensions.")
+            raise ValueError(
+                "Points must lie on a hyperboloid: Value at timelike dimension must exceed norm of spacelike dimensions."
+            )
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -265,14 +267,14 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
             return np.mean(np.abs(y - y_hat))
         elif metric in ["r2", "R2"]:
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
-        
+
     def fit(self, X, y):
         """Fit a decision tree to the data. Wrapper for DecisionTreeClassifier's
         fit method but with a dummy self.classes_ attribute."""
         super().fit(X, y)
         self.classes_ = None
         return self
-        
+
 
 class HyperbolicDecisionTreeRegressor(DecisionTreeRegressor, HyperbolicDecisionTreeClassifier):
     """Hacky multiple inheritance constructor - seems to work though"""
