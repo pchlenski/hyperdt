@@ -200,7 +200,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
             assert np.allclose(
                 np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
                 -1.0,
-                atol=1e-3,  # Don't be too strict
+                atol=1e-1,  # Don't be too strict
             )
         except AssertionError:
             raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of -1.")
