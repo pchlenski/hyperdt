@@ -9,9 +9,9 @@ from .hyperbolic_trig import get_candidates_hyperbolic
 class DecisionNode:
     def __init__(self, value=None, probs=None, feature=None, theta=None):
         self.value = value
-        self.probs = probs
-        self.feature = feature
-        self.theta = theta
+        self.probs = probs # predicted class probabilities of all samples in the leaf
+        self.feature = feature # feature index
+        self.theta = theta # threshold
         self.left = None
         self.right = None
 
@@ -100,7 +100,8 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def _leaf_values(self, y):
         """Return the value and probability of a leaf node"""
         probs = self._get_probs(y)
-        return np.argmax(probs), probs
+        value = self.classes_[np.argmax(probs)]
+        return value, probs
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -138,7 +139,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         """Predict labels for samples in X"""
-        return np.array([self.classes_[self._traverse(x).value] for x in X])
+        return np.array([self._traverse(x).value for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
@@ -194,6 +195,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         indexing
         """
         X_spacelike = X[:, self.dims]  # Nice and clean
+        
         try:
             assert np.allclose(
                 np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
@@ -264,10 +266,13 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
         elif metric in ["r2", "R2"]:
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
         
-    def predict(self, X):
-        """Predict labels for samples in X"""
-        return np.array([self._traverse(x).value for x in X])
-
+    def fit(self, X, y):
+        """Fit a decision tree to the data. Wrapper for DecisionTreeClassifier's
+        fit method but with a dummy self.classes_ attribute."""
+        super().fit(X, y)
+        self.classes_ = None
+        return self
+        
 
 class HyperbolicDecisionTreeRegressor(DecisionTreeRegressor, HyperbolicDecisionTreeClassifier):
     """Hacky multiple inheritance constructor - seems to work though"""
