@@ -3,6 +3,22 @@
 import numpy as np
 from geomstats.geometry.hyperbolic import Hyperbolic
 
+# Need for bad_points:
+import geomstats.backend as gs
+import geomstats.algebra_utils as utils
+
+
+def bad_points(points, base_points, manifold):
+    """Avoid the 'Minkowski norm of 0' error by using this"""
+    sq_norm_tangent_vec = manifold.embedding_space.metric.squared_norm(points)
+    sq_norm_tangent_vec = gs.clip(sq_norm_tangent_vec, 0, np.inf)
+
+    coef_1 = utils.taylor_exp_even_func(sq_norm_tangent_vec, utils.cosh_close_0, order=5)
+    coef_2 = utils.taylor_exp_even_func(sq_norm_tangent_vec, utils.sinch_close_0, order=5)
+
+    exp = gs.einsum("...,...j->...j", coef_1, base_points) + gs.einsum("...,...j->...j", coef_2, points)
+    return manifold.metric.squared_norm(exp) == 0
+
 
 def wrapped_normal_mixture(
     num_points: int,
@@ -56,7 +72,9 @@ def wrapped_normal_mixture(
     )
 
     # Exponential map to hyperboloid at the class mean
-    tangent_vecs_transported = tangent_vecs_transported[~np.isclose(hyp.metric.norm(tangent_vecs_transported), 0)]
+    keep = ~bad_points(tangent_vecs_transported, means[classes], hyp)
+    tangent_vecs_transported = tangent_vecs_transported[keep]
+    classes = classes[keep]
     points = hyp.metric.exp(tangent_vec=tangent_vecs_transported, base_point=means[classes])
 
     return points, classes

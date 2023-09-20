@@ -3,7 +3,7 @@
 import yaml
 import os
 
-from time import time
+from time import time, sleep
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,19 @@ from sklearn.ensemble import RandomForestClassifier
 
 from src.hyperdt.forest import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
+
+# Loop controls:
+datasets = ["gaussian", "neuroseed"]
+clf_names = ["hrf", "hororf", "rf"]
+dims = [2, 4, 8, 16]
+# seeds = [0, 1, 2, 3, 4]
+# seeds = [5, 6, 7, 8, 9]
+# seeds = [10, 11, 12, 13, 14]
+seeds = [15, 16, 17, 18, 19]
+n_samples_train = 800
+
+# Adjust for train_test split
+n_samples = int(n_samples_train / 0.8)
 
 
 # Read params from yml file
@@ -32,8 +45,6 @@ def evaluate_hdt():
     # Get data
     X_train, y_train = get_training_data(class_label=params["class_label"], seed=params["seed"])
     X_train = convert(X_train.numpy(), "poincare", "hyperboloid")
-    X_test, y_test = get_testing_data(class_label=params["class_label"], seed=params["seed"])
-    X_test = convert(X_test.numpy(), "poincare", "hyperboloid")
 
     # Hyperparams
     args = {
@@ -44,70 +55,79 @@ def evaluate_hdt():
 
     # 5-fold cross-validation
     kf = KFold(n_splits=5, shuffle=True, random_state=params["seed"])
-    f1_scores_hrf = []
-    f1_scores_rf = []
-
-    iterator = kf.split(X_train)
+    iterator = list(kf.split(X_train))
 
     t1 = time()
+
     # Hyperbolic
+    f1_scores_hrf = []
     for train_index, test_index in iterator:
         hrf = HyperbolicRandomForestClassifier(**args)
         hrf.fit(X_train[train_index], y_train[train_index], use_tqdm=True, seed=params["seed"])
         y_pred = hrf.predict(X_train[test_index])
         f1_scores_hrf.append(f1_score(y_train[test_index], y_pred, average="micro"))
+
     t2 = time()
 
     # Euclidean
+    f1_scores_rf = []
     for train_index, test_index in iterator:
         rf = RandomForestClassifier(**args, random_state=params["seed"])
         rf.fit(X_train[train_index], y_train[train_index])
         y_pred = rf.predict(X_train[test_index])
         f1_scores_rf.append(f1_score(y_train[test_index], y_pred, average="micro"))
+
     t3 = time()
 
     return f1_scores_hrf, f1_scores_rf, t2 - t1, t3 - t2
 
 
 # datasets = ["gaussian", "neuroseed", "polblogs_geomstats"]
-datasets = ["gaussian", "neuroseed"]
-dims = [2, 4, 8]
-results = pd.DataFrame(columns=["dataset", "dim", "clf", "fold", "f1_micro"])
+results = pd.DataFrame(columns=["dataset", "dim", "seed", "clf", "fold", "f1_micro"])
+times = pd.DataFrame(columns=["dataset", "dim", "clf", "time"])
 template = yaml.safe_load(open("HoroRF/params_template.yml", "r"))
-for dataset in datasets:
-    for dim in dims:
-        # Save new params file
-        new_param = template.copy()
-        outpath = f"logs/big_bench/hororf_{dataset}_{dim}"
-        new_param["output_path"] = outpath
-        new_param["dataset_file"] = f"datasets.{dataset}"
-        new_param["class_label"] = dim
-        yaml.safe_dump(new_param, open(f"./HoroRF/params.yml", "w"))
 
-        # Run HoroRF
-        t1 = time()
-        os.system(f"cd ./HoroRF && python train_hyp_rf.py -c ./HoroRF/params.yml")
-        t2 = time()
-        hororf_time = t2 - t1
-        # This saves a copy of the params file, so it's easy to double-check this looking back
+for seed in seeds:
+    for dataset in datasets:
+        for dim in dims:
+            # Save new params file
+            new_param = template.copy()
+            outpath = f"logs/big_bench/hororf_{dataset}_{dim}_{seed}"
+            new_param["output_path"] = outpath
+            new_param["dataset_file"] = f"datasets.{dataset}"
+            new_param["class_label"] = dim
+            new_param["seed"] = seed
+            new_param["num_samples"] = n_samples
+            yaml.safe_dump(new_param, open(f"./HoroRF/params.yml", "w"))
 
-        # Run our evaluations
-        f1_scores_hrf, f1_scores_rf, hrf_time, rf_time = evaluate_hdt()
+            # Run HoroRF
+            t1 = time()
+            os.system(f"cd ./HoroRF && python train_hyp_rf.py -c ./HoroRF/params.yml")
+            t2 = time()
+            hororf_time = t2 - t1
+            # This saves a copy of the params file, so it's easy to double-check this looking back
 
-        # Save results
-        np.savetxt(f"./HoroRF/{outpath}/hrf.txt", f1_scores_hrf, delimiter="\t", fmt="%s")
-        np.savetxt(f"./HoroRF/{outpath}/rf.txt", f1_scores_rf, delimiter="\t", fmt="%s")
+            # Run our evaluations
+            f1_scores_hrf, f1_scores_rf, hrf_time, rf_time = evaluate_hdt()
 
-        # Load results from HoroRF
-        f1_scores_hororf = np.loadtxt(f"./HoroRF/{outpath}/results_micro.txt", delimiter="\t")
+            # Save results
+            np.savetxt(f"./HoroRF/{outpath}/hrf.txt", f1_scores_hrf, delimiter="\t", fmt="%s")
+            np.savetxt(f"./HoroRF/{outpath}/rf.txt", f1_scores_rf, delimiter="\t", fmt="%s")
 
-        # Save results to dataframe
-        clf_names = ["hrf", "rf", "horof"]
-        for scores, name in zip([f1_scores_hrf, f1_scores_rf, f1_scores_hororf], clf_names):
-            for fold, score in enumerate(scores):
-                results.loc[len(results)] = [dataset, dim, name, fold, score]
+            # Load results from HoroRF
+            f1_scores_hororf = np.loadtxt(f"./HoroRF/{outpath}/results_micro.txt", delimiter="\t")
 
-        # Save times
-        np.savetxt(f"./HoroRF/{outpath}/times.txt", [hrf_time, hororf_time, rf_time], delimiter="\t", fmt="%s")
+            # Save results to dataframe
+            scores = [f1_scores_hrf, f1_scores_hororf, f1_scores_rf]
+            ts = [hrf_time, hororf_time, rf_time]
+            for scores, t, name in zip(scores, ts, clf_names):
+                for fold, score in enumerate(scores):
+                    results.loc[len(results)] = [dataset, dim, seed, name, fold, score]
+                times.loc[len(times)] = [dataset, dim, name, t]
 
-        results.to_csv("./HoroRF/logs/big_bench/hororf_results.csv")
+            # Save times
+            np.savetxt(f"./HoroRF/{outpath}/times.txt", times, delimiter="\t", fmt="%s")
+
+            # Save dataframes
+            results.to_csv("./HoroRF/logs/big_bench/hororf_results.tsv", sep="\t")
+            times.to_csv("./HoroRF/logs/big_bench/hororf_times.tsv", sep="\t")
