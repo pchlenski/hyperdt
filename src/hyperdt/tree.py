@@ -200,10 +200,18 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
                 -1.0,
                 atol=1e-3,  # Don't be too strict
             )
+        except AssertionError:
+            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of -1.")
+        
+        try:
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
+        except AssertionError:
+            raise ValueError("Points must lie on a hyperboloid: Timelike dimension must be greater than 1.")
+        
+        try:
             assert np.all(X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1))
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid")
+            raise ValueError("Points must lie on a hyperboloid: Timelike dimension must be greater than the norm of the spacelike dimensions.")
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -255,6 +263,10 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
             return np.mean(np.abs(y - y_hat))
         elif metric in ["r2", "R2"]:
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
+        
+    def predict(self, X):
+        """Predict labels for samples in X"""
+        return np.array([self._traverse(x).value for x in X])
 
 
 class HyperbolicDecisionTreeRegressor(DecisionTreeRegressor, HyperbolicDecisionTreeClassifier):
