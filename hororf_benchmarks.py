@@ -16,15 +16,16 @@ from src.hyperdt.forest import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
 
 # Loop controls:
-# datasets = ["gaussian", "neuroseed"]
-datasets = ["neuroseed"]
+datasets = ["gaussian", "neuroseed"]
+# datasets = ["neuroseed"]
 clf_names = ["hrf", "hororf", "rf"]
 dims = [2, 4, 8, 16]
 # seeds = [0, 1, 2, 3, 4]
 # seeds = [5, 6, 7, 8, 9]
 # seeds = [10, 11, 12, 13, 14]
 # seeds = [15, 16, 17, 18, 19]
-seeds = [15]
+# seeds = [15]
+seeds = [16, 17, 18, 19]
 n_samples_train = 800
 
 # Adjust for train_test split
