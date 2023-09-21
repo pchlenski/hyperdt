@@ -32,13 +32,21 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.criterion = criterion
         self.weights = weights
         self.min_impurity_decrease = 0.0
-
+        
+        self.ndim = None
+        self.dims = None
+        self.classes_ = None
+        
         # Set loss
         if criterion == "gini":
             self._loss = self._gini
 
     def _get_probs(self, y):
         """Get the class probabilities"""
+        # Convert y labels into indices in self.classes_
+        # self.classes_ maintains the indexing that we want for all of our
+        # datapoints
+        y = np.searchsorted(self.classes_, y)
         return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
     def _gini(self, y):
@@ -100,8 +108,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def _leaf_values(self, y):
         """Return the value and probability of a leaf node"""
         probs = self._get_probs(y)
-        value = self.classes_[np.argmax(probs)]
-        return value, probs
+        return np.argmax(probs), probs
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -117,7 +124,6 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             self.weights /= np.sum(self.weights)
 
         # Validate data and fit tree:
-        # self.label_names, y = np.unique(y, return_inverse=True)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
@@ -139,7 +145,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         """Predict labels for samples in X"""
-        return np.array([self._traverse(x).value for x in X])
+        return np.array([self.classes_[self._traverse(x).value] for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
@@ -151,12 +157,13 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
-    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", **kwargs):
+    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", curvature=1, **kwargs):
         super().__init__(**kwargs)
         self.candidates = candidates
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
         self.dot_product = dot_product
+        self.curvature = abs(curvature)
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
@@ -195,16 +202,15 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         indexing
         """
         X_spacelike = X[:, self.dims]  # Nice and clean
-
         try:
             assert np.allclose(
                 np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
-                -1.0,
-                atol=1e-3,  # Don't be too strict
+                -1 / self.curvature,
+                atol=1e-1,  # Don't be too strict
             )
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid: Minkowski norm does not equal the curvature of -1.")
-
+            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of {}.".format(self.curvature))
+        
         try:
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
         except AssertionError:
