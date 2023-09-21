@@ -32,7 +32,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.criterion = criterion
         self.weights = weights
         self.min_impurity_decrease = 0.0
-
+        
+        self.ndim = None
+        self.dims = None
+        self.classes_ = None
+        
         # Set loss
         if criterion == "gini":
             self._loss = self._gini
