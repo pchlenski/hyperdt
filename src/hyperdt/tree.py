@@ -151,12 +151,13 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
-    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", **kwargs):
+    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", curvature=1, **kwargs):
         super().__init__(**kwargs)
         self.candidates = candidates
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
         self.dot_product = dot_product
+        self.curvature = abs(curvature)
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
@@ -195,15 +196,14 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         indexing
         """
         X_spacelike = X[:, self.dims]  # Nice and clean
-        
         try:
             assert np.allclose(
                 np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
-                -1.0,
+                -1 / self.curvature,
                 atol=1e-1,  # Don't be too strict
             )
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of -1.")
+            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of {}.".format(self.curvature))
         
         try:
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
