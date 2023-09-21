@@ -43,6 +43,10 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def _get_probs(self, y):
         """Get the class probabilities"""
+        # Convert y labels into indices in self.classes_
+        # self.classes_ maintains the indexing that we want for all of our
+        # datapoints
+        y = np.searchsorted(self.classes_, y)
         return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
     def _gini(self, y):
@@ -104,8 +108,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def _leaf_values(self, y):
         """Return the value and probability of a leaf node"""
         probs = self._get_probs(y)
-        value = self.classes_[np.argmax(probs)]
-        return value, probs
+        return np.argmax(probs), probs
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -121,7 +124,6 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             self.weights /= np.sum(self.weights)
 
         # Validate data and fit tree:
-        # self.label_names, y = np.unique(y, return_inverse=True)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
@@ -143,7 +145,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def predict(self, X):
         """Predict labels for samples in X"""
-        return np.array([self._traverse(x).value for x in X])
+        return np.array([self.classes_[self._traverse(x).value] for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
