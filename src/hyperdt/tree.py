@@ -255,6 +255,10 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
     def _leaf_values(self, y):
         """Return the value and probability (dummy) of a leaf node"""
         return np.mean(y), None  # TODO: probs?
+    
+    def predict(self, X):
+        """Predict labels for samples in X"""
+        return np.array([self._traverse(x).value for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X (dummy)"""
