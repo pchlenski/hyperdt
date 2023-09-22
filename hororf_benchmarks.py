@@ -16,16 +16,19 @@ from src.hyperdt.forest import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
 
 # Loop controls:
-datasets = ["gaussian", "neuroseed"]
+# datasets = ["gaussian", "neuroseed"]
 # datasets = ["neuroseed"]
+datasets = ["polblogs_hypll"]
 clf_names = ["hrf", "hororf", "rf"]
-dims = [2, 4, 8, 16]
+# dims = [2, 4, 8, 16]
+dims = [2]
 # seeds = [0, 1, 2, 3, 4]
+seeds = [0]
 # seeds = [5, 6, 7, 8, 9]
 # seeds = [10, 11, 12, 13, 14]
 # seeds = [15, 16, 17, 18, 19]
 # seeds = [15]
-seeds = [16, 17, 18, 19]
+# seeds = [16, 17, 18, 19]
 n_samples_train = 800
 
 # Adjust for train_test split
@@ -44,6 +47,8 @@ def evaluate_hdt():
         from HoroRF.datasets.neuroseed import get_training_data, get_testing_data
     elif params["dataset_file"] == "datasets.polblogs_geomstats":
         from HoroRF.datasets.polblogs_geomstats import get_training_data, get_testing_data
+    elif params["dataset_file"] == "datasets.polblogs_hypll":
+        from HoroRF.datasets.polblogs_hypll import get_training_data, get_testing_data
 
     # Get data
     X_train, y_train = get_training_data(class_label=params["class_label"], seed=params["seed"])
