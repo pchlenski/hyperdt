@@ -27,6 +27,7 @@ def wrapped_normal_mixture(
     n_dim: int = 2,
     default_coords_type: str = "extrinsic",
     seed: int = None,
+    adjust_for_dim: bool = True,
 ) -> np.ndarray:
     """Generate points from a mixture of Gaussians on the hyperboloid"""
 
@@ -54,6 +55,8 @@ def wrapped_normal_mixture(
         covs[i] = np.random.normal(size=(n_dim, n_dim))
         covs[i] = covs[i] @ covs[i].T
     covs = noise_std * covs
+    if adjust_for_dim:
+        covs = covs / n_dim
 
     # Generate random class probabilities
     probs = np.random.uniform(size=num_classes)

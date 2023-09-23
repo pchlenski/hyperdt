@@ -23,9 +23,9 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         criterion="gini",
         weights=None,
         n_jobs=-1,
+        tree_type=DecisionTreeClassifier,
     ):
         self.n_estimators = n_estimators
-        self.tree_type = DecisionTreeClassifier
         self.n_jobs = n_jobs
         self.tree_params = {}
         self.max_depth = self.tree_params["max_depth"] = max_depth
@@ -33,6 +33,7 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.min_samples_leaf = self.tree_params["min_samples_leaf"] = min_samples_leaf
         self.criterion = self.tree_params["criterion"] = criterion
         self.weights = self.tree_params["weights"] = weights
+        self.tree_type = tree_type
         self.trees = self._get_trees()
 
     def _get_trees(self):
@@ -81,6 +82,6 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
 
 class HyperbolicRandomForestClassifier(RandomForestClassifier):
     def __init__(self, timelike_dim=0, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(tree_type=HyperbolicDecisionTreeClassifier, **kwargs)
         self.timelike_dim = self.tree_params["timelike_dim"] = timelike_dim
-        self.tree_type = HyperbolicDecisionTreeClassifier
+        assert isinstance(self.trees[0], HyperbolicDecisionTreeClassifier)

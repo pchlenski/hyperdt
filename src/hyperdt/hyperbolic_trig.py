@@ -31,15 +31,14 @@ def _dist_aberration(m, x1, x2):
     return _dist(x1, m) - _dist(m, x2)
 
 
-def get_midpoint(theta1, theta2):
+def get_midpoint(theta1, theta2, skip_checks=True):
     """Find hyperbolic midpoint of two angles"""
     theta_min = np.min([theta1, theta2])
     theta_max = np.max([theta1, theta2])
-    root = root_scalar(
-        _dist_aberration, args=(theta1, theta2), bracket=[theta_min, theta_max]
-    ).root
-    assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
-    assert root >= theta_min and root <= theta_max
+    root = root_scalar(_dist_aberration, args=(theta1, theta2), bracket=[theta_min, theta_max]).root
+    if not skip_checks:
+        assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
+        assert root >= theta_min and root <= theta_max
     return root
 
 
@@ -52,12 +51,7 @@ def get_candidates_hyperbolic(X, dim, timelike_dim, dot_product="sparse"):
     thetas = np.unique(thetas)  # This also sorts
 
     # Get all pairs of angles
-    candidates = np.array(
-        [
-            get_midpoint(theta1, theta2)
-            for theta1, theta2 in zip(thetas[:-1], thetas[1:])
-        ]
-    )
+    candidates = np.array([get_midpoint(theta1, theta2) for theta1, theta2 in zip(thetas[:-1], thetas[1:])])
     if dot_product == "sparse_minkowski":
         pass
     else:
