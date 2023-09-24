@@ -10,7 +10,7 @@ from joblib import Parallel, delayed
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier
 
-from .tree import DecisionTreeClassifier, HyperbolicDecisionTreeClassifier
+from .tree import DecisionTreeClassifier, HyperbolicDecisionTreeClassifier, DecisionTreeRegressor, HyperbolicDecisionTreeRegressor
 
 
 class RandomForestClassifier(BaseEstimator, ClassifierMixin):
@@ -35,6 +35,8 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.weights = self.tree_params["weights"] = weights
         self.tree_type = tree_type
         self.trees = self._get_trees()
+        
+        assert type(self.trees[0]) == self.tree_type, "Tree type mismatch"
 
     def _get_trees(self):
         return [self.tree_type(**self.tree_params) for _ in range(self.n_estimators)]
@@ -78,6 +80,13 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
     def score(self, X, y):
         """Return the mean accuracy on the given test data and labels"""
         return np.mean(self.predict(X) == y)
+    
+
+class RandomForestRegressor(RandomForestClassifier):
+    
+    def __init__(self, **kwargs):
+        kwargs['tree_type'] = DecisionTreeRegressor
+        super().__init__(**kwargs)
 
 
 class HyperbolicRandomForestClassifier(RandomForestClassifier):
