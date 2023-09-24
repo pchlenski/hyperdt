@@ -24,6 +24,7 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         weights=None,
         n_jobs=-1,
         tree_type=DecisionTreeClassifier,
+        random_state=None
     ):
         self.n_estimators = n_estimators
         self.n_jobs = n_jobs
@@ -35,6 +36,7 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.weights = self.tree_params["weights"] = weights
         self.tree_type = tree_type
         self.trees = self._get_trees()
+        self.random_state = random_state
         
         assert isinstance(self.trees[0], self.tree_type), "Tree type mismatch"
 
@@ -52,7 +54,9 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.classes_ = np.unique(y)
 
         if seed is not None:
-            np.random.seed(seed)
+            self.random_state = seed
+        if self.random_state is not None:
+            np.random.seed(self.random_state)
 
         # Fit decision trees individually (parallelized):
         trees = tqdm(self.trees) if use_tqdm else self.trees
