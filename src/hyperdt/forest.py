@@ -36,7 +36,7 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.tree_type = tree_type
         self.trees = self._get_trees()
         
-        assert type(self.trees[0]) == self.tree_type, "Tree type mismatch"
+        assert isinstance(self.trees[0], self.tree_type), "Tree type mismatch"
 
     def _get_trees(self):
         return [self.tree_type(**self.tree_params) for _ in range(self.n_estimators)]
@@ -83,10 +83,9 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
     
 
 class RandomForestRegressor(RandomForestClassifier):
-    
     def __init__(self, **kwargs):
-        kwargs['tree_type'] = DecisionTreeRegressor
-        super().__init__(**kwargs)
+        super().__init__(tree_type=DecisionTreeRegressor, **kwargs)
+        assert isinstance(self.trees[0], DecisionTreeRegressor)
 
 
 class HyperbolicRandomForestClassifier(RandomForestClassifier):
@@ -94,3 +93,10 @@ class HyperbolicRandomForestClassifier(RandomForestClassifier):
         super().__init__(tree_type=HyperbolicDecisionTreeClassifier, **kwargs)
         self.timelike_dim = self.tree_params["timelike_dim"] = timelike_dim
         assert isinstance(self.trees[0], HyperbolicDecisionTreeClassifier)
+
+
+class HyperbolicRandomForestRegressor(RandomForestClassifier):
+    def __init__(self, timelike_dim=0, **kwargs):
+        super().__init__(tree_type=HyperbolicDecisionTreeRegressor, **kwargs)
+        self.timelike_dim = self.tree_params["timelike_dim"] = timelike_dim
+        assert isinstance(self.trees[0], HyperbolicDecisionTreeRegressor)
