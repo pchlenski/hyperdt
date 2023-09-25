@@ -20,12 +20,13 @@ datasets = ["gaussian", "neuroseed", "polblogs_hypll"]
 clf_names = ["hrf", "hororf", "rf"]
 dims = [2, 4, 8, 16]
 seeds = [0, 1, 2, 3, 4]
-# n_samples_train = 100
 n_samples_train = [100, 200, 400, 800]
 
 # Tree controls
-max_depth = 3
-num_classifiers = 12
+# max_depth = 3
+max_depth = 6
+# num_classifiers = 12
+num_classifiers = 24
 min_samples_leaf = 1
 
 # Adjust for train_test split
@@ -37,6 +38,7 @@ def evaluate_hdt():
     params = yaml.safe_load(open("./HoroRF/params.yml", "r"))
 
     # Dataset
+    t0 = time()
     print(f"Using loader from file: {params['dataset_file']}")
     if params["dataset_file"] == "datasets.gaussian":
         from HoroRF.datasets.gaussian import get_training_data, get_testing_data
@@ -48,8 +50,15 @@ def evaluate_hdt():
         from HoroRF.datasets.polblogs_hypll import get_training_data, get_testing_data
 
     # Get data
-    X_train, y_train = get_training_data(class_label=params["class_label"], seed=params["seed"])
-    X_train = convert(X_train.numpy(), "poincare", "hyperboloid")
+    X_train, y_train = get_training_data(
+        class_label=params["class_label"],
+        seed=params["seed"],
+        num_samples=params["num_samples"],
+        convert_to_poincare=False,
+    )
+    X_train = X_train.numpy()
+    print("X shape:", X_train.shape)
+    # X_train = convert(X_train.numpy(), "poincare", "hyperboloid")
     y_train = y_train.numpy()
 
     # Hyperparams
@@ -73,7 +82,8 @@ def evaluate_hdt():
             hrf.fit(X_train[train_index], y_train[train_index], use_tqdm=True, seed=params["seed"])
             y_pred = hrf.predict(X_train[test_index])
             f1_scores_hrf.append(f1_score(y_train[test_index], y_pred, average="micro"))
-        except:
+        except Exception as e:
+            print(e)
             f1_scores_hrf.append(np.nan)
 
     t2 = time()
@@ -86,12 +96,13 @@ def evaluate_hdt():
             rf.fit(X_train[train_index], y_train[train_index])
             y_pred = rf.predict(X_train[test_index])
             f1_scores_rf.append(f1_score(y_train[test_index], y_pred, average="micro"))
-        except:
+        except Exception as e:
+            print(e)
             f1_scores_rf.append(np.nan)
 
     t3 = time()
 
-    return f1_scores_hrf, f1_scores_rf, t2 - t1, t3 - t2
+    return f1_scores_hrf, f1_scores_rf, t2 - t1, t3 - t2, t1 - t0
 
 
 # datasets = ["gaussian", "neuroseed", "polblogs_geomstats"]
@@ -102,14 +113,12 @@ template = yaml.safe_load(open("HoroRF/params_template.yml", "r"))
 for n in n_samples:
     for seed in seeds:
         for dataset in datasets:
-            for dim in dims:
-                # Some special logic for polblogs_hypll datasets, where we don't do sampling:
-                if dataset == "polblogs_hypll":
-                    if n != 100:
-                        continue
-                    else:
-                        n = 980
+            # Some special logic for polblogs_hypll datasets, where we don't do sampling:
+            if dataset == "polblogs_hypll":
+                if n != 125:
+                    continue
 
+            for dim in dims:
                 # Save new params file
                 new_param = template.copy()
                 outpath = f"logs/big_bench/hororf_{dataset}_{dim}_{seed}"
@@ -131,7 +140,7 @@ for n in n_samples:
                 # This saves a copy of the params file, so it's easy to double-check this looking back
 
                 # Run our evaluations
-                f1_scores_hrf, f1_scores_rf, hrf_time, rf_time = evaluate_hdt()
+                f1_scores_hrf, f1_scores_rf, hrf_time, rf_time, init_time = evaluate_hdt()
 
                 # Save results
                 np.savetxt(f"./HoroRF/{outpath}/hrf.txt", f1_scores_hrf, delimiter="\t", fmt="%s")
