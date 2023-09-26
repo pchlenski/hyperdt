@@ -93,14 +93,20 @@ class RandomForestRegressor(RandomForestClassifier):
 
 
 class HyperbolicRandomForestClassifier(RandomForestClassifier):
-    def __init__(self, timelike_dim=0, **kwargs):
+    def __init__(self, timelike_dim=0, curvature=-1, **kwargs):
         super().__init__(tree_type=HyperbolicDecisionTreeClassifier, **kwargs)
+        self.curvature = curvature
+        for tree in self.trees:
+            tree.curvature = curvature
         self.timelike_dim = self.tree_params["timelike_dim"] = timelike_dim
         assert isinstance(self.trees[0], HyperbolicDecisionTreeClassifier)
 
 
 class HyperbolicRandomForestRegressor(RandomForestClassifier):
-    def __init__(self, timelike_dim=0, **kwargs):
+    def __init__(self, timelike_dim=0, curvature=-1, **kwargs):
         super().__init__(tree_type=HyperbolicDecisionTreeRegressor, **kwargs)
+        self.curvature = curvature
+        for tree in self.trees:
+            tree.curvature = curvature
         self.timelike_dim = self.tree_params["timelike_dim"] = timelike_dim
         assert isinstance(self.trees[0], HyperbolicDecisionTreeRegressor)
