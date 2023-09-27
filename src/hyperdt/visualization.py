@@ -131,7 +131,7 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, minkowski=Fal
         _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
         # Match scatterplot colors
         majority_class = node.value
-        class_colors = plt.get_cmap("Paired", n_classes)
+        class_colors = plt.get_cmap("viridis", n_classes)
         color = class_colors(majority_class)
 
         # Don't extend past unit circle
@@ -142,7 +142,7 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, minkowski=Fal
         # Make image
         image = np.zeros(shape=(2001, 2001, 4))
         if mask is not None:
-            image[mask] = (color[0], color[1], color[2], 0.2)
+            image[mask] = (color[0], color[1], color[2], 0.5)
             image[~mask] = (0, 0, 0, 0)
         ax.imshow(image, origin="lower", extent=[-1, 1, -1, 1], aspect="auto")
         return ax
@@ -217,19 +217,15 @@ def plot_tree(
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 10))
 
-    # Draw unit circle
-    _x = np.linspace(-1, 1, 1000)
-    _y = np.sqrt(1 - _x**2)
-    ax.plot(_x, _y, c="black")
-    ax.plot(_x, -_y, c="black")
-
     # Plot data
     if X is not None and y is not None:
         X = convert(X, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim)
-        ax.scatter(X[:, 0], X[:, 1], c=y, cmap="Paired")
+        ax.scatter(X[:, 0], X[:, 1], c=y, cmap="viridis", marker="o", s=25, edgecolors="k", linewidths=1)
 
     # Get colors
-    colors = list(plt.cm.get_cmap("tab10", hdt.max_depth).colors)
+    # colors = list(plt.cm.get_cmap("Reds", hdt.max_depth).colors)
+    cmap = plt.cm.get_cmap("gist_heat", hdt.max_depth * 2)  # 2x keeps colors from being too light
+    colors = [cmap(i) for i in range(hdt.max_depth)]
 
     # Initialize mask
     if masked:
@@ -252,6 +248,12 @@ def plot_tree(
         **kwargs,
     )
     ax.legend(handles=[plt.Line2D([0], [0], color=c, label=f"Depth {i}") for i, c in enumerate(colors)])
+
+    # Draw unit circle
+    _x = np.linspace(-1, 1, 1000)
+    _y = np.sqrt(1 - _x**2)
+    ax.plot(_x, _y, c="black")
+    ax.plot(_x, -_y, c="black")
 
     # Set axis limits
     ax.set_xlim([-1.1, 1.1])

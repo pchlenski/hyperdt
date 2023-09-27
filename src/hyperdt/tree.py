@@ -32,11 +32,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self.criterion = criterion
         self.weights = weights
         self.min_impurity_decrease = 0.0
-        
+
         self.ndim = None
         self.dims = None
         self.classes_ = None
-        
+
         # Set loss
         if criterion == "gini":
             self._loss = self._gini
@@ -201,16 +201,20 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         squares, rather than once from sum of all spacelike squares, to simplify
         indexing
         """
-        X_spacelike = X[:, self.dims]  # Nice and clean
+        X_spacelike = X[:, self.dims].squeeze()  # Nice and clean
         try:
             assert np.allclose(
-                np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
+                np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim, None] ** 2,
                 -1 / self.curvature,
                 atol=1e-1,  # Don't be too strict
             )
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of {}.".format(self.curvature))
-        
+            raise ValueError(
+                "Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of {}.".format(
+                    self.curvature
+                )
+            )
+
         try:
             assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
         except AssertionError:
@@ -257,7 +261,7 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
     def _leaf_values(self, y):
         """Return the value and probability (dummy) of a leaf node"""
         return np.mean(y), None  # TODO: probs?
-    
+
     def predict(self, X):
         """Predict labels for samples in X"""
         return np.array([self._traverse(x).value for x in X])
