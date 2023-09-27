@@ -62,7 +62,9 @@ def convert(X, initial, final, timelike_dim=0, **kwargs):
     X = _validate_X(X)
 
     # Convert
-    if initial == "hyperboloid" and final == "klein":
+    if initial == final:
+        X_new = X
+    elif initial == "hyperboloid" and final == "klein":
         X_new = _hyperboloid_to_klein(X, **kwargs, timelike_dim=timelike_dim)
     elif initial == "hyperboloid" and final == "poincare":
         X_new = _hyperboloid_to_poincare(X, **kwargs, timelike_dim=timelike_dim)

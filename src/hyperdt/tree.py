@@ -3,14 +3,15 @@
 import numpy as np
 from warnings import warn
 from sklearn.base import BaseEstimator, ClassifierMixin
+from .hyperbolic_trig import get_candidates_hyperbolic
 
 
 class DecisionNode:
     def __init__(self, value=None, probs=None, feature=None, theta=None):
         self.value = value
-        self.probs = probs
-        self.feature = feature
-        self.theta = theta
+        self.probs = probs  # predicted class probabilities of all samples in the leaf
+        self.feature = feature  # feature index
+        self.theta = theta  # threshold
         self.left = None
         self.right = None
 
@@ -22,24 +23,38 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         min_samples_leaf=1,
         min_samples_split=2,
         criterion="gini",  # 'gini', 'entropy', or 'misclassification'
+        weights=None,
     ):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
         self.tree = None
         self.criterion = criterion
-
+        self.weights = weights
+        self.min_impurity_decrease = 0.0
+        
+        self.ndim = None
+        self.dims = None
+        self.classes_ = None
+        
         # Set loss
         if criterion == "gini":
             self._loss = self._gini
 
     def _get_probs(self, y):
         """Get the class probabilities"""
+        # Convert y labels into indices in self.classes_
+        # self.classes_ maintains the indexing that we want for all of our
+        # datapoints
+        y = np.searchsorted(self.classes_, y)
         return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
     def _gini(self, y):
         """Gini impurity"""
-        return 1 - np.sum(self._get_probs(y) ** 2)
+        if self.weights is not None:
+            return 1 - np.sum(self._get_probs(y) ** 2 * self.weights)
+        else:
+            return 1 - np.sum(self._get_probs(y) ** 2)
 
     def _information_gain(self, left, right, y):
         """Get the information gain from splitting on a given dimension"""
@@ -62,11 +77,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         """Recursively fit a node of the tree"""
 
         # Base case
-        if (
-            depth == self.max_depth
-            or len(y) <= self.min_samples_split
-            or len(np.unique(y)) == 1
-        ):
+        if depth == self.max_depth or len(y) <= self.min_samples_split or len(np.unique(y)) == 1:
             value, probs = self._leaf_values(y)
             return DecisionNode(value=value, probs=probs)
 
@@ -78,8 +89,13 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
                 min_len = np.min([len(y[left]), len(y[right])])
                 if min_len >= self.min_samples_leaf:
                     score = self._information_gain(left, right, y)
-                    if score > best_score:
+                    if score >= best_score + self.min_impurity_decrease:
                         best_dim, best_theta, best_score = dim, theta, score
+
+        # Fallback case:
+        if best_score == -1:
+            value, probs = self._leaf_values(y)
+            return DecisionNode(value=value, probs=probs)
 
         # Populate:
         node = DecisionNode(feature=best_dim, theta=best_theta)
@@ -94,23 +110,20 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         probs = self._get_probs(y)
         return np.argmax(probs), probs
 
-    def _validate_labels(self, y):
-        try:
-            assert np.max(y) == len(self.classes_) - 1
-            assert np.min(y) == 0
-        except AssertionError:
-            raise ValueError("Labels must be integers from 0 to n_classes - 1")
-
     def fit(self, X, y):
         """Fit a decision tree to the data"""
 
         # Some attributes we need:
         self.ndim = X.shape[1]
         self.dims = list(range(self.ndim))
-        self.classes_ = np.unique(y)
+        self.classes_, y = np.unique(y, return_inverse=True)
+
+        # Weight classes
+        if self.weights == "balanced":
+            self.weights = 1 / np.bincount(y)
+            self.weights /= np.sum(self.weights)
 
         # Validate data and fit tree:
-        self._validate_labels(y)
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
@@ -128,15 +141,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         if node.value is not None:
             return node
 
-        return (
-            self._traverse(x, node.left)
-            if self._left(x, node)
-            else self._traverse(x, node.right)
-        )
+        return self._traverse(x, node.left) if self._left(x, node) else self._traverse(x, node.right)
 
     def predict(self, X):
         """Predict labels for samples in X"""
-        return np.array([self._traverse(x).value for x in X])
+        return np.array([self.classes_[self._traverse(x).value] for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X"""
@@ -148,34 +157,26 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
-    def __init__(
-        self,
-        candidates="grid",
-        min_dist=0.0,
-        timelike_dim=0,
-        sparse_dot_product=True,
-        **kwargs
-    ):
+    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", curvature=1, **kwargs):
         super().__init__(**kwargs)
         self.candidates = candidates
-        self.min_dist = min_dist
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
-        self.sparse_dot_product = sparse_dot_product
+        self.dot_product = dot_product
+        self.curvature = abs(curvature)
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
-        if self.sparse_dot_product and X.ndim == 1:
-            return np.sin(theta) * X[self.timelike_dim] + np.cos(theta) * X[dim]
-        elif self.sparse_dot_product:
-            return (
-                np.sin(theta) * X[:, self.timelike_dim]
-                + np.cos(theta) * X[:, dim]
-            )
-        else:
+        if self.dot_product == "sparse":
+            return np.sin(theta) * X[:, dim] - np.cos(theta) * X[:, self.timelike_dim]
+        elif self.dot_product == "dense":
             v = np.zeros(self.ndim)
-            v[self.timelike_dim], v[dim] = np.sin(theta), np.cos(theta)
-            return X @ self._normal(dim, theta)
+            v[self.timelike_dim], v[dim] = -np.cos(theta), np.sin(theta)
+            return X @ v
+        elif self.dot_product == "sparse_minkowski":
+            return np.sin(theta) * X[:, dim] + np.cos(theta) * X[:, self.timelike_dim]
+        else:
+            raise ValueError("Invalid dot product")
 
     def _get_split(self, X, dim, theta):
         """Get the indices of the split"""
@@ -184,36 +185,43 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
-            X[:, dim][X[:, dim] == 0.0] = 1e-6
-            # thetas = np.arctan(X[:, self.timelike_dim] / X[:, dim])
-            thetas = np.arctan2(X[:, self.timelike_dim], X[:, dim])
-            thetas = np.unique(np.sort(thetas))
+            return get_candidates_hyperbolic(
+                X=X,
+                dim=dim,
+                timelike_dim=self.timelike_dim,
+                dot_product=self.dot_product,
+            )
 
-            # Keep only those that are sufficiently far apart; take midpoints:
-            if self.min_dist > 0:
-                thetas = thetas[
-                    np.where(np.abs(np.diff(thetas)) > self.min_dist)[0]
-                ]
-            return (thetas[:-1] + thetas[1:]) / 2.0
         elif self.candidates == "grid":
-            return np.linspace(-np.pi / 4, np.pi / 4, 1000)
+            return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
 
     def _validate_hyperbolic(self, X):
-        """Ensure points lie on a hyperboloid - subtract timelike twice from sum
-        of all squares, rather than once from sum of all spacelike squares, to
-        simplify indexing"""
+        """
+        Ensure points lie on a hyperboloid - subtract timelike twice from sum of all
+        squares, rather than once from sum of all spacelike squares, to simplify
+        indexing
+        """
         X_spacelike = X[:, self.dims]  # Nice and clean
         try:
             assert np.allclose(
-                np.sum(X_spacelike ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
-                -1.0,
-            )
-            assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
-            assert np.all(
-                X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1)
+                np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim] ** 2,
+                -1 / self.curvature,
+                atol=1e-1,  # Don't be too strict
             )
         except AssertionError:
-            raise ValueError("Points must lie on a hyperboloid")
+            raise ValueError("Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of {}.".format(self.curvature))
+        
+        try:
+            assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
+        except AssertionError:
+            raise ValueError("Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1.")
+
+        try:
+            assert np.all(X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1))
+        except AssertionError:
+            raise ValueError(
+                "Points must lie on a hyperboloid: Value at timelike dimension must exceed norm of spacelike dimensions."
+            )
 
     def fit(self, X, y):
         """Fit a decision tree to the data"""
@@ -234,7 +242,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _left(self, x, node):
         """Boolean: Go left?"""
-        return self._dot(x, node.feature, node.theta) < 0
+        return self._dot(x.reshape(1, -1), node.feature, node.theta).item() < 0
 
 
 class DecisionTreeRegressor(DecisionTreeClassifier):
@@ -249,6 +257,10 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
     def _leaf_values(self, y):
         """Return the value and probability (dummy) of a leaf node"""
         return np.mean(y), None  # TODO: probs?
+    
+    def predict(self, X):
+        """Predict labels for samples in X"""
+        return np.array([self._traverse(x).value for x in X])
 
     def predict_proba(self, X):
         """Predict class probabilities for samples in X (dummy)"""
@@ -266,10 +278,15 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
         elif metric in ["r2", "R2"]:
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
 
+    def fit(self, X, y):
+        """Fit a decision tree to the data. Wrapper for DecisionTreeClassifier's
+        fit method but with a dummy self.classes_ attribute."""
+        super().fit(X, y)
+        self.classes_ = None
+        return self
 
-class HyperbolicDecisionTreeRegressor(
-    DecisionTreeRegressor, HyperbolicDecisionTreeClassifier
-):
+
+class HyperbolicDecisionTreeRegressor(DecisionTreeRegressor, HyperbolicDecisionTreeClassifier):
     """Hacky multiple inheritance constructor - seems to work though"""
 
     def __init__(self, **kwargs):
