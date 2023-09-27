@@ -10,8 +10,10 @@ import pandas as pd
 
 from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 
+from src.hyperdt.tree import HyperbolicDecisionTreeClassifier
 from src.hyperdt.forest import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
 
@@ -24,13 +26,18 @@ n_samples_train = [100, 200, 400, 800]
 
 # Tree controls
 # max_depth = 3
-max_depth = 6
+max_depth = 3
 # num_classifiers = 12
-num_classifiers = 24
+# num_classifiers = 24
+num_classifiers = 1
 min_samples_leaf = 1
 
 # Adjust for train_test split
 n_samples = [int(x / 0.8) for x in n_samples_train]
+if num_classifiers == 1:
+    no_resample = True
+else:
+    no_resample = False
 
 
 # Read params from yml file
@@ -66,7 +73,13 @@ def evaluate_hdt():
         "n_estimators": params["num_trees"],
         "max_depth": params["max_depth"],
         "min_samples_leaf": params["min_samples_leaf"],
+        "random_state": params["seed"],
     }
+    use_tree = False
+    if args["n_estimators"] == 1:
+        del args["n_estimators"]  # This is a decision tree now
+        del args["random_state"]
+        use_tree = True
 
     # 5-fold cross-validation
     kf = KFold(n_splits=5, shuffle=True, random_state=params["seed"])
@@ -78,8 +91,12 @@ def evaluate_hdt():
     f1_scores_hrf = []
     for train_index, test_index in iterator:
         try:
-            hrf = HyperbolicRandomForestClassifier(**args)
-            hrf.fit(X_train[train_index], y_train[train_index], use_tqdm=True, seed=params["seed"])
+            if use_tree:
+                hrf = HyperbolicDecisionTreeClassifier(**args)
+                hrf.fit(X_train[train_index], y_train[train_index])
+            else:
+                hrf = HyperbolicRandomForestClassifier(**args)
+                hrf.fit(X_train[train_index], y_train[train_index], use_tqdm=True, seed=params["seed"])
             y_pred = hrf.predict(X_train[test_index])
             f1_scores_hrf.append(f1_score(y_train[test_index], y_pred, average="micro"))
         except Exception as e:
@@ -92,7 +109,10 @@ def evaluate_hdt():
     f1_scores_rf = []
     for train_index, test_index in iterator:
         try:
-            rf = RandomForestClassifier(**args, random_state=params["seed"])
+            if use_tree:
+                rf = DecisionTreeClassifier(**args)
+            else:
+                rf = RandomForestClassifier(**args)
             rf.fit(X_train[train_index], y_train[train_index])
             y_pred = rf.predict(X_train[test_index])
             f1_scores_rf.append(f1_score(y_train[test_index], y_pred, average="micro"))
@@ -107,7 +127,7 @@ def evaluate_hdt():
 
 # datasets = ["gaussian", "neuroseed", "polblogs_geomstats"]
 results = pd.DataFrame(columns=["n_samples", "dataset", "dim", "seed", "clf", "fold", "f1_micro"])
-times = pd.DataFrame(columns=["n_samples", "dataset", "dim", "clf", "time"])
+times = pd.DataFrame(columns=["n_samples", "dataset", "dim", "clf", "time", "init_time"])
 template = yaml.safe_load(open("HoroRF/params_template.yml", "r"))
 
 for n in n_samples:
@@ -130,6 +150,7 @@ for n in n_samples:
                 new_param["num_trees"] = num_classifiers
                 new_param["max_depth"] = max_depth
                 new_param["min_samples_leaf"] = min_samples_leaf
+                new_param["no_resample"] = no_resample
                 yaml.safe_dump(new_param, open(f"./HoroRF/params.yml", "w"))
 
                 # Run HoroRF
@@ -155,7 +176,7 @@ for n in n_samples:
                 for scores, t, name in zip(scores, ts, clf_names):
                     for fold, score in enumerate(scores):
                         results.loc[len(results)] = [int(n * 0.8), dataset, dim, seed, name, fold, score]
-                    times.loc[len(times)] = [int(n * 0.8), dataset, dim, name, t]
+                    times.loc[len(times)] = [int(n * 0.8), dataset, dim, name, t, init_time]
 
                 # Save times
                 np.savetxt(f"./HoroRF/{outpath}/times.txt", times, delimiter="\t", fmt="%s")
