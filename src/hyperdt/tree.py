@@ -201,27 +201,22 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         squares, rather than once from sum of all spacelike squares, to simplify
         indexing
         """
-        X_spacelike = X[:, self.dims].squeeze()  # Nice and clean
         try:
             assert np.allclose(
-                np.sum(X_spacelike**2, axis=1) - X[:, self.timelike_dim, None] ** 2,
+                np.sum(X[:, self.dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
                 -1 / self.curvature,
                 atol=1e-1,  # Don't be too strict
             )
         except AssertionError:
-            raise ValueError(
-                "Points must lie on a hyperboloid: Lorentzian Inner Product does not equal the curvature of {}.".format(
-                    self.curvature
-                )
-            )
+            raise ValueError(f"Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}.")
 
         try:
-            assert np.all(X[:, self.timelike_dim] > 1.0)  # Ensure timelike
+            assert np.all(X[:, self.timelike_dim] > 1.0 / self.curvature)  # Ensure timelike
         except AssertionError:
             raise ValueError("Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1.")
 
         try:
-            assert np.all(X[:, self.timelike_dim] > np.linalg.norm(X_spacelike, axis=1))
+            assert np.all(X[:, self.timelike_dim] > np.linalg.norm(X[:, self.dims], axis=1))
         except AssertionError:
             raise ValueError(
                 "Points must lie on a hyperboloid: Value at timelike dimension must exceed norm of spacelike dimensions."

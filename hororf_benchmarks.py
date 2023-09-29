@@ -26,9 +26,9 @@ seeds = [5, 6, 7, 8, 9]
 n_samples_train = [100, 200, 400, 800]
 
 # Tree controls
-max_depth = 3
-# num_classifiers = 24
-num_classifiers = 12
+max_depth = 6
+num_classifiers = 24
+# num_classifiers = 12
 min_samples_leaf = 1
 
 # Adjust for train_test split

@@ -6,6 +6,7 @@ from scipy.interpolate import interp1d
 from .conversions import convert
 
 GRID_SIZE = 2001
+STYLES = ["solid", "dashed", "dotted", "dashdot", "solid", "dashed", "dotted", "dashdot"]  # Whatever
 
 
 def _get_geodesic(
@@ -80,6 +81,7 @@ def plot_boundary(
     color="red",
     mask=None,
     return_mask=False,
+    style="solid",
 ):
     """Plot decision boundaries of a hyperbolic decision tree"""
     # Set t_dim: we assume total number of dims is 3
@@ -115,7 +117,7 @@ def plot_boundary(
 
     # Verify geodesics lie inside unit circle:
     if np.all(np.linalg.norm(geodesic_points, axis=1) <= 1):
-        ax.plot(geodesic_points[:, 0], geodesic_points[:, 1], c=color)
+        ax.plot(geodesic_points[:, 0], geodesic_points[:, 1], c=color, linestyle=style)
     else:
         print(f"Geodesic points lie outside unit circle:\t{boundary_dim} {boundary_theta/np.pi:.3f}*pi {t_dim}")
 
@@ -155,6 +157,7 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, minkowski=Fal
             mask=mask,
             return_mask=True,
             ax=ax,
+            style=STYLES[depth],
             **kwargs,
         )
         reuse = {
@@ -220,12 +223,13 @@ def plot_tree(
     # Plot data
     if X is not None and y is not None:
         X = convert(X, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim)
-        ax.scatter(X[:, 0], X[:, 1], c=y, cmap="viridis", marker="o", s=25, edgecolors="k", linewidths=1)
+        ax.scatter(X[:, 0], X[:, 1], c=y, cmap="viridis", marker="o", s=49, edgecolors="k", linewidths=1)
 
     # Get colors
     # colors = list(plt.cm.get_cmap("Reds", hdt.max_depth).colors)
-    cmap = plt.cm.get_cmap("gist_heat", hdt.max_depth * 2)  # 2x keeps colors from being too light
-    colors = [cmap(i) for i in range(hdt.max_depth)]
+    # cmap = plt.cm.get_cmap("gist_heat", hdt.max_depth * 2)  # 2x keeps colors from being too light
+    # colors = [cmap(i) for i in range(hdt.max_depth)]
+    colors = ["red"] * hdt.max_depth
 
     # Initialize mask
     if masked:
