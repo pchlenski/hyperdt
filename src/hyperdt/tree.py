@@ -164,6 +164,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         self.hyperbolic = True
         self.dot_product = dot_product
         self.curvature = abs(curvature)
+        self.skip_validation = False
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
@@ -201,6 +202,9 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         squares, rather than once from sum of all spacelike squares, to simplify
         indexing
         """
+        if self.skip_validation:
+            return
+
         try:
             assert np.allclose(
                 np.sum(X[:, self.dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
