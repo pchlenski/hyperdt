@@ -3,7 +3,7 @@
 import numpy as np
 from warnings import warn
 from sklearn.base import BaseEstimator, ClassifierMixin
-from .hyperbolic_trig import get_candidates_hyperbolic
+from .hyperbolic_trig import get_candidates
 
 
 class DecisionNode:
@@ -157,14 +157,24 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
 
 class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
-    def __init__(self, candidates="data", timelike_dim=0, dot_product="sparse", curvature=1, **kwargs):
+    def __init__(
+        self,
+        candidates="data",
+        timelike_dim=0,
+        dot_product="sparse",
+        curvature=1,
+        skip_hyperboloid_check=False,
+        angle_midpoint_method="hyperbolic",
+        **kwargs,
+    ):
         super().__init__(**kwargs)
         self.candidates = candidates
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
         self.dot_product = dot_product
         self.curvature = abs(curvature)
-        self.skip_validation = False
+        self.skip_hyperboloid_check = skip_hyperboloid_check
+        self.angle_midpoint_method = angle_midpoint_method  # 'hyperbolic' or 'bisect'
 
     def _dot(self, X, dim, theta):
         """Get the dot product of the normal vector and the data"""
@@ -186,11 +196,12 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
-            return get_candidates_hyperbolic(
+            return get_candidates(
                 X=X,
                 dim=dim,
                 timelike_dim=self.timelike_dim,
                 dot_product=self.dot_product,
+                method=self.angle_midpoint_method,
             )
 
         elif self.candidates == "grid":
@@ -202,7 +213,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         squares, rather than once from sum of all spacelike squares, to simplify
         indexing
         """
-        if self.skip_validation:
+        if self.skip_hyperboloid_check:
             return
 
         try:

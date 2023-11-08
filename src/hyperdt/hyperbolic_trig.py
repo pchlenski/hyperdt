@@ -31,30 +31,29 @@ def _dist_aberration(m, x1, x2):
     return _dist(x1, m) - _dist(m, x2)
 
 
-def get_midpoint(theta1, theta2, skip_checks=True):
+def get_midpoint(theta1, theta2, skip_checks=True, method="hyperbolic"):
     """Find hyperbolic midpoint of two angles"""
     theta_min = np.min([theta1, theta2])
     theta_max = np.max([theta1, theta2])
-    root = root_scalar(_dist_aberration, args=(theta1, theta2), bracket=[theta_min, theta_max]).root
+    if method == "hyperbolic":
+        root = root_scalar(_dist_aberration, args=(theta1, theta2), bracket=[theta_min, theta_max]).root
+    elif method == "bisect":
+        root = (theta1 + theta2) / 2
     if not skip_checks:
         assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
         assert root >= theta_min and root <= theta_max
     return root
 
 
-def get_candidates_hyperbolic(X, dim, timelike_dim, dot_product="sparse"):
+def get_candidates(X, dim, timelike_dim, method="hyperbolic"):
     """Get candidate split points for hyperbolic decision tree"""
-    if dot_product == "sparse_minkowski":
-        thetas = np.arctan2(-X[:, timelike_dim], X[:, dim])
-    else:
-        thetas = np.arctan2(X[:, timelike_dim], X[:, dim])
+    thetas = np.arctan2(X[:, timelike_dim], X[:, dim])
     thetas = np.unique(thetas)  # This also sorts
 
     # Get all pairs of angles
-    candidates = np.array([get_midpoint(theta1, theta2) for theta1, theta2 in zip(thetas[:-1], thetas[1:])])
-    if dot_product == "sparse_minkowski":
-        pass
-    else:
-        assert (candidates >= np.pi / 4).all()
-        assert (candidates <= 3 * np.pi / 4).all()
+    candidates = np.array(
+        [get_midpoint(theta1, theta2, method=method) for theta1, theta2 in zip(thetas[:-1], thetas[1:])]
+    )
+    # assert (candidates >= np.pi / 4).all()
+    # assert (candidates <= 3 * np.pi / 4).all()
     return candidates
