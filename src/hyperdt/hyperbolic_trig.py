@@ -54,6 +54,4 @@ def get_candidates(X, dim, timelike_dim, method="hyperbolic"):
     candidates = np.array(
         [get_midpoint(theta1, theta2, method=method) for theta1, theta2 in zip(thetas[:-1], thetas[1:])]
     )
-    # assert (candidates >= np.pi / 4).all()
-    # assert (candidates <= 3 * np.pi / 4).all()
     return candidates
