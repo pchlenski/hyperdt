@@ -3,6 +3,7 @@ data/
 src/__pycache__/
 *.egg_info/
 
+
 # Hyperbolic learning github repos I cloned
 hsvm/
 hyperbolic_learning/
@@ -13,6 +14,8 @@ hyplinear/
 HoroRF/
 poincare_embeddings/
 
+
 # All symlinks
 hororf_benchmarks/
 cifar100
+poincare_embeddings
