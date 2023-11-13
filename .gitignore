@@ -12,7 +12,8 @@ hyperbolics/
 hyperbolic_embeddings/
 hyplinear/
 HoroRF/
-poincare_embeddings/
+poincare-embeddings/
+poincare-embeddings
 
 
 # All symlinks
