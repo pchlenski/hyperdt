@@ -17,6 +17,6 @@ poincare-embeddings
 
 
 # All symlinks
-hororf_benchmarks/
+hororf_benchmarks
 cifar100
 poincare_embeddings
