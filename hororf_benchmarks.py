@@ -19,16 +19,15 @@ from src.hyperdt.conversions import convert
 
 # Loop controls:
 datasets = ["gaussian", "neuroseed", "polblogs_hypll"]
-clf_names = ["hrf", "hororf", "rf"]
+# clf_names = ["hrf", "hororf", "rf"]
+clf_names = ["hrf"]
 dims = [2, 4, 8, 16]
-# seeds = [0, 1, 2, 3, 4]
-seeds = [5, 6, 7, 8, 9]
+seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 n_samples_train = [100, 200, 400, 800]
 
 # Tree controls
-max_depth = 6
-num_classifiers = 24
-# num_classifiers = 12
+max_depth = 3
+num_classifiers = 12
 min_samples_leaf = 1
 
 # Adjust for train_test split
@@ -88,36 +87,38 @@ def evaluate_hdt():
 
     # Hyperbolic
     f1_scores_hrf = []
-    for train_index, test_index in iterator:
-        try:
-            if use_tree:
-                hrf = HyperbolicDecisionTreeClassifier(**args)
-                hrf.fit(X_train[train_index], y_train[train_index])
-            else:
-                hrf = HyperbolicRandomForestClassifier(**args)
-                hrf.fit(X_train[train_index], y_train[train_index], use_tqdm=True, seed=params["seed"])
-            y_pred = hrf.predict(X_train[test_index])
-            f1_scores_hrf.append(f1_score(y_train[test_index], y_pred, average="micro"))
-        except Exception as e:
-            print(e)
-            f1_scores_hrf.append(np.nan)
+    if "hrf" in clf_names:
+        for train_index, test_index in iterator:
+            try:
+                if use_tree:
+                    hrf = HyperbolicDecisionTreeClassifier(**args)
+                    hrf.fit(X_train[train_index], y_train[train_index])
+                else:
+                    hrf = HyperbolicRandomForestClassifier(**args)
+                    hrf.fit(X_train[train_index], y_train[train_index], use_tqdm=True, seed=params["seed"])
+                y_pred = hrf.predict(X_train[test_index])
+                f1_scores_hrf.append(f1_score(y_train[test_index], y_pred, average="micro"))
+            except Exception as e:
+                print(e)
+                f1_scores_hrf.append(np.nan)
 
     t2 = time()
 
     # Euclidean
     f1_scores_rf = []
-    for train_index, test_index in iterator:
-        try:
-            if use_tree:
-                rf = DecisionTreeClassifier(**args)
-            else:
-                rf = RandomForestClassifier(**args)
-            rf.fit(X_train[train_index], y_train[train_index])
-            y_pred = rf.predict(X_train[test_index])
-            f1_scores_rf.append(f1_score(y_train[test_index], y_pred, average="micro"))
-        except Exception as e:
-            print(e)
-            f1_scores_rf.append(np.nan)
+    if "rf" in clf_names:
+        for train_index, test_index in iterator:
+            try:
+                if use_tree:
+                    rf = DecisionTreeClassifier(**args)
+                else:
+                    rf = RandomForestClassifier(**args)
+                rf.fit(X_train[train_index], y_train[train_index])
+                y_pred = rf.predict(X_train[test_index])
+                f1_scores_rf.append(f1_score(y_train[test_index], y_pred, average="micro"))
+            except Exception as e:
+                print(e)
+                f1_scores_rf.append(np.nan)
 
     t3 = time()
 
@@ -154,7 +155,8 @@ for n in n_samples:
 
                 # Run HoroRF
                 t1 = time()
-                os.system(f"cd ./HoroRF && python train_hyp_rf.py -c ./HoroRF/params.yml")
+                if "hororf" in clf_names:
+                    os.system(f"cd ./HoroRF && python train_hyp_rf.py -c ./HoroRF/params.yml")
                 t2 = time()
                 hororf_time = t2 - t1
                 # This saves a copy of the params file, so it's easy to double-check this looking back
