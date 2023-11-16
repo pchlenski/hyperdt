@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.optimize import root_scalar
+from functools import cache
 
 
 def _dist(x1, x2):
@@ -31,14 +32,29 @@ def _dist_aberration(m, x1, x2):
     return _dist(x1, m) - _dist(m, x2)
 
 
+@cache
+def _hyperbolic_midpoint(a, b):
+    """New method: analytical closed forms for hyperbolic midpoint"""
+    if np.isclose(a, b):
+        return a
+    v = np.sin(2 * a - 2 * b) / (np.sin(a + b) * np.sin(b - a))
+    coef = -1 if a < np.pi - b else 1
+    sol = (-v + coef * np.sqrt(v**2 - 4)) / 2
+    return np.arctan2(1, sol) % np.pi
+
+
 def get_midpoint(theta1, theta2, skip_checks=True, method="hyperbolic"):
     """Find hyperbolic midpoint of two angles"""
     theta_min = np.min([theta1, theta2])
     theta_max = np.max([theta1, theta2])
     if method == "hyperbolic":
+        root = _hyperbolic_midpoint(theta1, theta2)
+    elif method == "hyperbolic_scipy":
         root = root_scalar(_dist_aberration, args=(theta1, theta2), bracket=[theta_min, theta_max]).root
     elif method == "bisect":
         root = (theta1 + theta2) / 2
+    else:
+        raise ValueError(f"Unknown method {method}")
     if not skip_checks:
         assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
         assert root >= theta_min and root <= theta_max
