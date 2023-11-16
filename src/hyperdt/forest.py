@@ -16,6 +16,7 @@ from .tree import (
     DecisionTreeRegressor,
     HyperbolicDecisionTreeRegressor,
 )
+from .cache import SplitCache
 
 
 class RandomForestClassifier(BaseEstimator, ClassifierMixin):
@@ -33,12 +34,15 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
     ):
         self.n_estimators = n_estimators
         self.n_jobs = n_jobs
+
         self.tree_params = {}
         self.max_depth = self.tree_params["max_depth"] = max_depth
         self.min_samples_split = self.tree_params["min_samples_split"] = min_samples_split
         self.min_samples_leaf = self.tree_params["min_samples_leaf"] = min_samples_leaf
         self.criterion = self.tree_params["criterion"] = criterion
         self.weights = self.tree_params["weights"] = weights
+        self.cache = self.tree_params["cache"] = SplitCache()
+
         self.tree_type = tree_type
         self.trees = self._get_trees()
         self.random_state = random_state

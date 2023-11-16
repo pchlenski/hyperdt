@@ -32,7 +32,6 @@ def _dist_aberration(m, x1, x2):
     return _dist(x1, m) - _dist(m, x2)
 
 
-@cache
 def _hyperbolic_midpoint(a, b):
     """New method: analytical closed forms for hyperbolic midpoint"""
     if np.isclose(a, b):
@@ -45,29 +44,32 @@ def _hyperbolic_midpoint(a, b):
 
 def get_midpoint(theta1, theta2, skip_checks=True, method="hyperbolic"):
     """Find hyperbolic midpoint of two angles"""
-    theta_min = np.min([theta1, theta2])
-    theta_max = np.max([theta1, theta2])
     if method == "hyperbolic":
         root = _hyperbolic_midpoint(theta1, theta2)
+
     elif method == "hyperbolic_scipy":
+        theta_min, theta_max = np.min([theta1, theta2]), np.max([theta1, theta2])
         root = root_scalar(_dist_aberration, args=(theta1, theta2), bracket=[theta_min, theta_max]).root
+
     elif method == "bisect":
         root = (theta1 + theta2) / 2
+
     else:
         raise ValueError(f"Unknown method {method}")
+
     if not skip_checks:
         assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
         assert root >= theta_min and root <= theta_max
+
     return root
 
 
-def get_candidates(X, dim, timelike_dim, method="hyperbolic"):
+def get_candidates(X, dim, timelike_dim, method="hyperbolic", cache=None):
     """Get candidate split points for hyperbolic decision tree"""
     thetas = np.arctan2(X[:, timelike_dim], X[:, dim])
     thetas = np.unique(thetas)  # This also sorts
 
     # Get all pairs of angles
-    candidates = np.array(
-        [get_midpoint(theta1, theta2, method=method) for theta1, theta2 in zip(thetas[:-1], thetas[1:])]
-    )
+    func = cache.cache_decorator(get_midpoint) if cache is not None else get_midpoint
+    candidates = np.array([func(theta1, theta2, method=method) for theta1, theta2 in zip(thetas[:-1], thetas[1:])])
     return candidates

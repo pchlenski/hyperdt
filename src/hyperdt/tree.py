@@ -4,6 +4,7 @@ import numpy as np
 from warnings import warn
 from sklearn.base import BaseEstimator, ClassifierMixin
 from .hyperbolic_trig import get_candidates
+from .cache import SplitCache
 
 
 class DecisionNode:
@@ -24,6 +25,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         min_samples_split=2,
         criterion="gini",  # 'gini', 'entropy', or 'misclassification'
         weights=None,
+        cache=None,
     ):
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
@@ -41,11 +43,13 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         if criterion == "gini":
             self._loss = self._gini
 
+        # Cache management (not used in Euclidean case)
+        self.cache = SplitCache() if cache is None else cache
+
     def _get_probs(self, y):
         """Get the class probabilities"""
         # Convert y labels into indices in self.classes_
-        # self.classes_ maintains the indexing that we want for all of our
-        # datapoints
+        # self.classes_ maintains the indexing that we want for all of our datapoints
         y = np.searchsorted(self.classes_, y)
         return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
@@ -196,25 +200,24 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
 
     def _get_candidates(self, X, dim):
         if self.candidates == "data":
-            return get_candidates(X=X, dim=dim, timelike_dim=self.timelike_dim, method=self.angle_midpoint_method)
+            return get_candidates(
+                X=X, dim=dim, timelike_dim=self.timelike_dim, method=self.angle_midpoint_method, cache=self.cache
+            )
 
         elif self.candidates == "grid":
             return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
 
     def _validate_hyperbolic(self, X):
         """
-        Ensure points lie on a hyperboloid - subtract timelike twice from sum of all
-        squares, rather than once from sum of all spacelike squares, to simplify
-        indexing
+        Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
+        of all spacelike squares, to simplify indexing.
         """
         if self.skip_hyperboloid_check:
             return
 
         try:
             assert np.allclose(
-                np.sum(X[:, self.dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2,
-                -1 / self.curvature,
-                atol=1e-1,  # Don't be too strict
+                np.sum(X[:, self.dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2, -1 / self.curvature, atol=1e-3
             )
         except AssertionError:
             raise ValueError(f"Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}.")
@@ -287,8 +290,8 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
             return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
 
     def fit(self, X, y):
-        """Fit a decision tree to the data. Wrapper for DecisionTreeClassifier's
-        fit method but with a dummy self.classes_ attribute."""
+        """Fit a decision tree to the data. Wrapper for DecisionTreeClassifier's fit method but with a dummy
+        self.classes_ attribute."""
         super().fit(X, y)
         self.classes_ = None
         return self

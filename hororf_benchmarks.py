@@ -127,7 +127,8 @@ def evaluate_hdt():
 
 # datasets = ["gaussian", "neuroseed", "polblogs_geomstats"]
 results = pd.DataFrame(columns=["n_samples", "dataset", "dim", "seed", "clf", "fold", "f1_micro"])
-times = pd.DataFrame(columns=["n_samples", "dataset", "dim", "clf", "time", "init_time"])
+# times = pd.DataFrame(columns=["n_samples", "dataset", "dim", "clf", "time", "init_time"])
+times = pd.DataFrame(columns=["n_samples", "dataset", "dim", "seed", "clf", "time", "init_time"])
 template = yaml.safe_load(open("HoroRF/params_template.yml", "r"))
 
 for n in n_samples:
@@ -177,7 +178,8 @@ for n in n_samples:
                 for scores, t, name in zip(scores, ts, clf_names):
                     for fold, score in enumerate(scores):
                         results.loc[len(results)] = [int(n * 0.8), dataset, dim, seed, name, fold, score]
-                    times.loc[len(times)] = [int(n * 0.8), dataset, dim, name, t, init_time]
+                    # times.loc[len(times)] = [int(n * 0.8), dataset, dim, name, t, init_time]
+                    times.loc[len(times)] = [int(n * 0.8), dataset, dim, seed, name, t, 0]
 
                 # Save times
                 np.savetxt(f"./HoroRF/{outpath}/times.txt", times, delimiter="\t", fmt="%s")
