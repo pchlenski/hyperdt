@@ -31,6 +31,8 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         n_jobs=-1,
         tree_type=DecisionTreeClassifier,
         random_state=None,
+        skip_hyperboloid_check=False,
+        angle_midpoint_method="hyperbolic",
     ):
         self.n_estimators = n_estimators
         self.n_jobs = n_jobs
@@ -42,6 +44,8 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.criterion = self.tree_params["criterion"] = criterion
         self.weights = self.tree_params["weights"] = weights
         self.cache = self.tree_params["cache"] = SplitCache()
+        self.skip_hyperboloid_check = self.tree_params["skip_hyperboloid_check"] = skip_hyperboloid_check
+        self.angle_midpoint_method = self.tree_params["angle_midpoint_method"] = angle_midpoint_method
 
         self.tree_type = tree_type
         self.trees = self._get_trees()
