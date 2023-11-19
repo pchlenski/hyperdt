@@ -22,14 +22,13 @@ from src.hyperdt.conversions import convert
 clf_names = ["hrf", "hororf", "rf"]
 # dims = [2, 4, 8, 16]
 datasets = ["binary_wordnet"]
-# dims = ["animal", "group", "mammal", "occupation", "rodent", "solid", "tree", "worker"]
-dims = [1, 2, 3]
+dims = ["animal", "group", "mammal", "occupation", "rodent", "solid", "tree", "worker", 1, 2, 3]
 seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
 n_samples_train = [1000]  # Not used for binary_wordnet
 
 # Tree controls
 max_depth = 3
-num_classifiers = 12
+num_classifiers = 1
 min_samples_leaf = 1
 
 # Adjust for train_test split
