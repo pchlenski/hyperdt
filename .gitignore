@@ -2,6 +2,7 @@ data/
 *.pyc
 src/__pycache__/
 *.egg_info/
+build/
 
 
 # Hyperbolic learning github repos I cloned
@@ -13,8 +14,11 @@ hyperbolic_embeddings/
 hyplinear/
 HoroRF/
 poincare-embeddings/
-poincare-embeddings
 HyperbolicCV/
+
+# Decision tree repos I cloned
+GeneralizedOptimalSparseDecisionTrees/
+Quant-BnB/
 
 
 # All symlinks

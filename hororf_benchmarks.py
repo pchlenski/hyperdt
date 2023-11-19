@@ -18,12 +18,14 @@ from src.hyperdt.forest import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
 
 # Loop controls:
-datasets = ["gaussian", "neuroseed", "polblogs_hypll"]
-# clf_names = ["hrf", "hororf", "rf"]
-clf_names = ["hrf"]
-dims = [2, 4, 8, 16]
+# datasets = ["gaussian", "neuroseed", "polblogs_hypll"]
+clf_names = ["hrf", "hororf", "rf"]
+# dims = [2, 4, 8, 16]
+datasets = ["binary_wordnet"]
+# dims = ["animal", "group", "mammal", "occupation", "rodent", "solid", "tree", "worker"]
+dims = [1, 2, 3]
 seeds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-n_samples_train = [100, 200, 400, 800]
+n_samples_train = [1000]  # Not used for binary_wordnet
 
 # Tree controls
 max_depth = 3
@@ -53,6 +55,8 @@ def evaluate_hdt():
         from HoroRF.datasets.polblogs_geomstats import get_training_data, get_testing_data
     elif params["dataset_file"] == "datasets.polblogs_hypll":
         from HoroRF.datasets.polblogs_hypll import get_training_data, get_testing_data
+    elif params["dataset_file"] == "datasets.binary_wordnet":
+        from HoroRF.datasets.binary_wordnet import get_training_data, get_testing_data
 
     # Get data
     X_train, y_train = get_training_data(
