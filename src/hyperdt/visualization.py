@@ -1,3 +1,7 @@
+"""Utilities for visualizing hyperbolic decision trees."""
+
+from typing import List, Tuple, Union, Literal
+
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -10,16 +14,16 @@ STYLES = ["solid", "dashed", "dotted", "dashdot", "solid", "dashed", "dotted", "
 
 
 def _get_geodesic(
-    dim,
-    theta,
-    t_dim=1,
-    n_dim=3,
-    start_t=-10,
-    end_t=10,
-    num_points=1000,
-    geometry="poincare",
-    timelike_dim=0,
-):
+    dim: int,
+    theta: float,
+    t_dim: int = 1,
+    n_dim: int = 3,
+    start_t: float = -10,
+    end_t: float = 10,
+    num_points: int = 1000,
+    geometry: Literal["poincare", "klein"] = "poincare",
+    timelike_dim: int = 0,
+) -> np.ndarray:
     """
     Get num_points points from intersection of a hyperplane and a geodesic.
 
@@ -40,7 +44,7 @@ def _get_geodesic(
     return convert(geodesic, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim)
 
 
-def _get_mask(boundary_dim, geodesic):
+def _get_mask(boundary_dim: int, geodesic: np.ndarray) -> np.ndarray:
     """
     Return all points such that <x, boundary> < 0 (left side of boundary).
 
@@ -64,18 +68,43 @@ def _get_mask(boundary_dim, geodesic):
 
 
 def plot_boundary(
-    boundary_dim,
-    boundary_theta,
-    t_dim=None,
-    geometry="poincare",
-    ax=None,
-    timelike_dim=0,
-    color="red",
-    mask=None,
-    return_mask=False,
-    style="solid",
-):
-    """Plot decision boundaries of a hyperbolic decision tree"""
+    boundary_dim: int,
+    boundary_theta: float,
+    t_dim: int = None,
+    geometry: Literal["poincare", "klein"] = "poincare",
+    ax: "Axes" = None,
+    timelike_dim: int = 0,
+    color: str = "red",
+    mask: np.ndarray = None,
+    return_mask: bool = False,
+    style: str = "solid",
+) -> Union["Axes", Tuple["Axes", np.ndarray]]:
+    """
+    Plot a single decision boundary of a hyperbolic decision tree
+
+    Args:
+    ----
+    boundary_dim: int
+        Which timelike dimension is nonzero for the deecision hyperplane (0, 1, 2)
+    boundary_theta: float
+        Inclination angle of the decision hyperplane (in radians, from pi/4 to 3pi/4)
+    t_dim: int
+        Which dimension is free for parameterizing a geodesic? (i.e. not timelike, not boundary_dim) (0, 1, 2)
+    geometry: str
+        Which geometry are we plotting in? ("poincare", "klein")
+    ax: matplotlib.axes.Axes
+        Axes to plot on. If None, a new figure is created
+    timelike_dim: int
+        Which dimension is timelike? (0, 1, 2)
+    color: str
+        Color of the decision boundary
+    mask: np.ndarray
+        Mask to apply to the decision boundary. If None, no mask is applied. Useful for recursive plotting.
+    return_mask: bool
+        Whether to return the mask after plotting. Useful for recursive plotting.
+    style: str
+        Line style for the decision boundary
+    """
     # Set t_dim: we assume total number of dims is 3
     if t_dim is None:
         dims = [0, 1, 2]
@@ -112,7 +141,16 @@ def plot_boundary(
         return ax
 
 
-def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, minkowski=False, **kwargs):
+def _plot_tree_recursive(
+    node: "DecisionNode",
+    ax: "Axes",
+    colors: List[str],
+    mask: np.ndarray,
+    depth: int,
+    n_classes: int,
+    minkowski: bool = False,
+    **kwargs,
+) -> "Axes":
     """Plot the decision boundary of a node and its children recursively."""
     if node.value is not None:  # Leaf case
         _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
@@ -170,14 +208,14 @@ def _plot_tree_recursive(node, ax, colors, mask, depth, n_classes, minkowski=Fal
         return ax
 
 
-def _val_to_index(val):
+def _val_to_index(val: float):
     """Convert a 2-place decimal to an index in (0, 200)"""
     assert val >= -1.0 and val <= 1.0
     val = np.round(val, 3)
     return int(val * 1000) - 1001
 
 
-def _apply_mask(x, y, mask):
+def _apply_mask(x: float, y: float, mask: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Apply a mask to x and y coordinates."""
     assert len(x) == len(y)
     x_out = []
@@ -192,16 +230,37 @@ def _apply_mask(x, y, mask):
 
 
 def plot_tree(
-    hdt,
-    X=None,
-    y=None,
-    geometry="poincare",
-    timelike_dim=0,
-    masked=True,
-    ax=None,
+    hdt: "HyperbolicDecisionTree",
+    X: np.ndarray = None,
+    y: np.ndarray = None,
+    geometry: Literal["poincare", "klein"] = "poincare",
+    timelike_dim: int = 0,
+    masked: bool = True,
+    ax: "Axes" = None,
     **kwargs,
-):
-    """Plot data and all decision boundaries of a hyperbolic decision tree."""
+) -> "Axes":
+    """
+    Plot data and all decision boundaries of a hyperbolic decision tree.
+
+    Args:
+    ----
+    hdt: hyperdt.tree.HyperbolicDecisionTree
+        Hyperbolic decision tree to plot
+    X: np.ndarray (n_samples, 3)
+        Data to plot (2D, hyperbolic coordinates)
+    y: np.ndarray (n_samples,)
+        Labels for data
+    geometry: str
+        Which geometry are we converting X to? ("poincare", "klein")
+    timelike_dim: int
+        Which dimension is timelike? (0, 1, 2)
+    masked: bool
+        Whether to apply a mask to the decision boundaries
+    ax: matplotlib.axes.Axes
+        Axes to plot on. If None, a new figure is created
+    kwargs: dict
+        Additional keyword arguments to pass to plot_boundary
+    """
     if ax is None:
         fig, ax = plt.subplots(figsize=(10, 10))
 

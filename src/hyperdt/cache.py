@@ -1,3 +1,5 @@
+"""Cache to keep track of split candidates in HyperDT"""
+
 from functools import lru_cache, wraps
 from threading import Lock
 
@@ -9,7 +11,7 @@ class SplitCache:
         self.cache = lru_cache()
         self.lock = Lock
 
-    def cache_decorator(self, func):
+    def cache_decorator(self, func: callable):
         @wraps(func)
         def wrapper(*args, **kwargs):
             with self.lock():

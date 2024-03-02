@@ -1,7 +1,11 @@
+"""Hyperbolic trigonometric functions used in hyperDT"""
+
+from typing import Literal
+
 import numpy as np
 
 
-def _dist(x1, x2):
+def _dist(x1: float, x2: float) -> float:
     """
     Closed form for distance between two unique rotational intersections where all other
     coordinates are 0
@@ -14,6 +18,13 @@ def _dist(x1, x2):
         - cos(theta1 + theta2) < 0, so we always take arccosh of a positive number
     - We can simplify the distance to a(theta1) * a(theta2) * cos(theta1 + theta2)
         - This is more stable than taking arccosh
+
+    Args:
+    -----
+    x1: float
+        First angle
+    x2: float
+        Second angle
     """
     a1 = np.sqrt(-1 / np.cos(2 * x1))
     a2 = np.sqrt(-1 / np.cos(2 * x2))
@@ -25,12 +36,12 @@ def _dist(x1, x2):
     return dist
 
 
-def _dist_aberration(m, x1, x2):
+def _dist_aberration(m: float, x1: float, x2: float) -> float:
     """This is 0 when d(theta1, m) = d(theta2, m) = d(theta1, theta2)/2"""
     return _dist(x1, m) - _dist(m, x2)
 
 
-def _hyperbolic_midpoint(a, b):
+def _hyperbolic_midpoint(a: float, b: float) -> float:
     """New method: analytical closed forms for hyperbolic midpoint"""
     if np.isclose(a, b):
         return a
@@ -40,7 +51,9 @@ def _hyperbolic_midpoint(a, b):
     return np.arctan2(1, sol) % np.pi
 
 
-def get_midpoint(theta1, theta2, skip_checks=True, method="hyperbolic"):
+def get_midpoint(
+    theta1: float, theta2: float, skip_checks: bool = True, method: Literal["hyperbolic", "bisect"] = "hyperbolic"
+) -> float:
     """Find hyperbolic midpoint of two angles"""
     if method == "hyperbolic":
         root = _hyperbolic_midpoint(theta1, theta2)
@@ -52,14 +65,42 @@ def get_midpoint(theta1, theta2, skip_checks=True, method="hyperbolic"):
         raise ValueError(f"Unknown method {method}")
 
     if not skip_checks:
+        theta_min = min(theta1, theta2)
+        theta_max = max(theta1, theta2)
         assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
         assert root >= theta_min and root <= theta_max
 
     return root
 
 
-def get_candidates(X, dim, timelike_dim, method="hyperbolic", cache=None):
-    """Get candidate split points for hyperbolic decision tree"""
+def get_candidates(
+    X: np.ndarray,
+    dim: int,
+    timelike_dim: int,
+    method: Literal["hyperbolic", "bisect"] = "hyperbolic",
+    cache: "SplitCache" = None,
+) -> np.ndarray:
+    """
+    Get candidate split points for hyperbolic decision tree
+
+    Args:
+    -----
+    X: np.ndarray
+        Data matrix
+    dim: int
+        Non-timelike dimension to project down onto
+    timelike_dim: int
+        Timelike dimension to project down onto
+    method: str
+        Method for finding midpoints
+    cache: SplitCache
+        Cache for split points
+
+    Returns:
+    --------
+    candidates: np.ndarray
+        Angular midpoints along the specified dimension
+    """
     thetas = np.arctan2(X[:, timelike_dim], X[:, dim])
     thetas = np.unique(thetas)  # This also sorts
 

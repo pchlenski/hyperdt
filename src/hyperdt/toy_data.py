@@ -1,5 +1,7 @@
 """Toy data for hyperboloid classification"""
 
+from typing import Tuple, Union, List, Literal
+
 import numpy as np
 from geomstats.geometry.hyperbolic import Hyperbolic
 
@@ -8,7 +10,7 @@ import geomstats.backend as gs
 import geomstats.algebra_utils as utils
 
 
-def bad_points(points, base_points, manifold):
+def bad_points(points: np.ndarray, base_points: np.ndarray, manifold: Hyperbolic) -> np.ndarray:
     """Avoid the 'Minkowski norm of 0' error by using this"""
     sq_norm_tangent_vec = manifold.embedding_space.metric.squared_norm(points)
     sq_norm_tangent_vec = gs.clip(sq_norm_tangent_vec, 0, np.inf)
@@ -25,11 +27,35 @@ def wrapped_normal_mixture(
     num_classes: int,
     noise_std: float = 1.0,
     n_dim: int = 2,
-    default_coords_type: str = "extrinsic",
+    default_coords_type: Literal["extrinsic", "ball", "half-space"] = "extrinsic",
     seed: int = None,
     adjust_for_dim: bool = True,
 ) -> np.ndarray:
-    """Generate points from a mixture of Gaussians on the hyperboloid"""
+    """
+    Generate points from a mixture of Gaussians on the hyperboloid.
+
+    Args:
+    -----
+    num_points: int
+        Number of points to generate
+    num_classes: int
+        Number of classes in the mixture
+    noise_std: float
+        Scalar multiplier for the covariance matrices of each class (default: 1.0)
+    n_dim: int
+        Dimension of the hyperboloid (default: 2)
+    default_coords_type: str
+        Coordinates type for the hyperboloid (default: "extrinsic")
+    seed: int
+        Random seed (default: None)
+    adjust_for_dim: bool
+        Adjust the covariance matrices for the dimension of the hyperboloid (default: True)
+
+    Returns:
+    --------
+    points: np.ndarray
+        Generated points on the hyperboloid
+    """
 
     # Set seed
     if seed is not None:
