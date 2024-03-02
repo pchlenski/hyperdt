@@ -1,7 +1,0 @@
-Metadata-Version: 2.1
-Name: hyperdt
-Version: 0.1
-Requires: numpy
-Requires: geomstats
-Requires: matplotlib
-Requires: sklearn
