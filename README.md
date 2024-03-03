@@ -12,7 +12,7 @@ To install, run this from your repo directory:
 ```bash
 git clone https://github.com/pchlenski/hyperdt
 cd hyperdt
-pip install -e .`
+pip install -e .
 ```
 
 If you are installing with e.g. a conda environment or virtualenv, you can find exact dependencies in `requirements.txt`.
