@@ -29,7 +29,7 @@ pip install hyperdt
 ```
 
 ## Tutorial
-A basic tutorial demonstrating key HyperDT functionality is available in `notebooks/tutrial.ipynb`.
+A basic tutorial demonstrating key HyperDT functionality is available in `notebooks/tutorial.ipynb`.
 
 ## Citation
 To cite HyperDT, please use the following:
