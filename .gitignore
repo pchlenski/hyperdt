@@ -1,8 +1,10 @@
 data/
 *.pyc
-src/__pycache__/
+hyperdt/__pycache__/
+hyperdt.egg-info/
 *.egg-info/
 build/
+dist/
 
 
 # Hyperbolic learning github repos I cloned
