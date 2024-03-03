@@ -14,7 +14,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 
 from src.hyperdt.tree import HyperbolicDecisionTreeClassifier
-from src.hyperdt.forest import HyperbolicRandomForestClassifier
+from src.hyperdt.ensemble import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
 
 from HoroRF.datasets.gaussian import get_training_data, get_testing_data
