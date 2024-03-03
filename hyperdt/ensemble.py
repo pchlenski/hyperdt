@@ -34,8 +34,7 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         n_jobs: int = -1,
         tree_type: Type[DecisionTreeClassifier] = DecisionTreeClassifier,
         random_state: Optional[int] = None,
-        skip_hyperboloid_check: bool = False,
-        angle_midpoint_method: Literal["hyperbolic", "bisect"] = "hyperbolic",
+        use_cache: bool = True,
     ) -> None:
         # Random forest parallelization parameters
         self.n_estimators = n_estimators
@@ -48,9 +47,7 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         self.min_samples_leaf = self.tree_params["min_samples_leaf"] = min_samples_leaf
         self.criterion = self.tree_params["criterion"] = criterion
         self.weights = self.tree_params["weights"] = weights
-        self.cache = self.tree_params["cache"] = SplitCache()
-        self.skip_hyperboloid_check = self.tree_params["skip_hyperboloid_check"] = skip_hyperboloid_check
-        self.angle_midpoint_method = self.tree_params["angle_midpoint_method"] = angle_midpoint_method
+        self.cache = self.tree_params["cache"] = SplitCache() if use_cache else None
 
         # Actually initialize the forest
         self.tree_type = tree_type
@@ -178,8 +175,21 @@ class RandomForestRegressor(RandomForestClassifier):
 class HyperbolicRandomForestClassifier(RandomForestClassifier):
     """Random forest for hyperbolic decision trees. Inherits from RandomForestClassifier."""
 
-    def __init__(self, timelike_dim=0, curvature=-1, **kwargs):
+    def __init__(
+        self,
+        timelike_dim: int = 0,
+        curvature: float = -1,
+        skip_hyperboloid_check: bool = False,
+        angle_midpoint_method: Literal["hyperbolic", "bisect"] = "hyperbolic",
+        **kwargs
+    ):
         super().__init__(tree_type=HyperbolicDecisionTreeClassifier, **kwargs)
+
+        # Set special params
+        self.skip_hyperboloid_check = self.tree_params["skip_hyperboloid_check"] = skip_hyperboloid_check
+        self.angle_midpoint_method = self.tree_params["angle_midpoint_method"] = angle_midpoint_method
+
+        # Fix curvature
         self.curvature = np.abs(curvature)
         for tree in self.trees:
             tree.curvature = np.abs(curvature)
@@ -190,8 +200,21 @@ class HyperbolicRandomForestClassifier(RandomForestClassifier):
 class HyperbolicRandomForestRegressor(RandomForestClassifier):
     """Random forest for hyperbolic regression problems. Inherits from RandomForestClassifier."""
 
-    def __init__(self, timelike_dim=0, curvature=-1, **kwargs):
+    def __init__(
+        self,
+        timelike_dim: int = 0,
+        curvature: float = -1,
+        skip_hyperboloid_check: bool = False,
+        angle_midpoint_method: Literal["hyperbolic", "bisect"] = "hyperbolic",
+        **kwargs
+    ):
         super().__init__(tree_type=HyperbolicDecisionTreeRegressor, **kwargs)
+
+        # Set special params
+        self.skip_hyperboloid_check = self.tree_params["skip_hyperboloid_check"] = skip_hyperboloid_check
+        self.angle_midpoint_method = self.tree_params["angle_midpoint_method"] = angle_midpoint_method
+
+        # Fix curvature
         self.curvature = np.abs(curvature)
         for tree in self.trees:
             tree.curvature = np.abs(curvature)

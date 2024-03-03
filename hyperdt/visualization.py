@@ -1,6 +1,6 @@
 """Utilities for visualizing hyperbolic decision trees."""
 
-from typing import List, Tuple, Union, Literal, Optional, TYPE_CHECKING
+from typing import List, Tuple, Union, Literal, Optional
 
 
 import numpy as np
@@ -10,11 +10,6 @@ from scipy.interpolate import interp1d
 from matplotlib.lines import Line2D
 
 from .conversions import convert
-
-if TYPE_CHECKING:
-    from matplotlib.axes import Axes
-    from hyperdt.tree import DecisionNode, HyperbolicDecisionTreeClassifier
-
 
 GRID_SIZE = 2001
 STYLES = ["solid", "dashed", "dotted", "dashdot", "solid", "dashed", "dotted", "dashdot"]  # Whatever
@@ -82,13 +77,13 @@ def plot_boundary(
     boundary_theta: float,
     t_dim: int = -1,
     geometry: Literal["poincare", "klein"] = "poincare",
-    ax: Optional[Axes] = None,
+    ax: Optional["Axes"] = None,
     timelike_dim: int = 0,
     color: str = "red",
     mask: Optional[np.ndarray] = None,
     return_mask: bool = False,
     style: str = "solid",
-) -> Union[Axes, Tuple[Axes, np.ndarray]]:
+) -> Union["Axes", Tuple["Axes", np.ndarray]]:
     """
     Plot a single decision boundary of a hyperbolic decision tree
 
@@ -153,15 +148,15 @@ def plot_boundary(
 
 
 def _plot_tree_recursive(
-    node: DecisionNode,
-    ax: Axes,
+    node: "DecisionNode",
+    ax: "Axes",
     colors: List[str],
     mask: Optional[np.ndarray],
     depth: int,
     n_classes: int,
     minkowski: bool = False,
     **kwargs,
-) -> Axes:
+) -> "Axes":
     """Plot the decision boundary of a node and its children recursively."""
     if node.value is not None:  # Leaf case
         _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
@@ -243,15 +238,15 @@ def _apply_mask(x: np.ndarray, y: np.ndarray, mask: np.ndarray) -> Tuple[np.ndar
 
 
 def plot_tree(
-    hdt: HyperbolicDecisionTreeClassifier,
+    hdt: "HyperbolicDecisionTreeClassifier",
     X: Optional[np.ndarray] = None,
     y: Optional[np.ndarray] = None,
     geometry: Literal["poincare", "klein"] = "poincare",
     timelike_dim: int = 0,
     masked: bool = True,
-    ax: Optional[Axes] = None,
+    ax: Optional["Axes"] = None,
     **kwargs,
-) -> Axes:
+) -> "Axes":
     """
     Plot data and all decision boundaries of a hyperbolic decision tree.
 

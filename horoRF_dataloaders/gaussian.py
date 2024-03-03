@@ -30,7 +30,7 @@ def bad_points(points, base_points, manifold):
 
 def _get(seed, dimension, num_samples, convert_to_poincare=True, **kwargs):
     data, labels = wrapped_normal_mixture(
-        n_dim=dimension, num_classes=2, num_points=num_samples, seed=seed, noise_std=2, **kwargs
+        num_dims=dimension, num_classes=2, num_points=num_samples, seed=seed, noise_std=2, **kwargs
     )
     if convert_to_poincare:
         data = convert(data, "poincare", "hyperboloid")

@@ -1,11 +1,8 @@
 """Hyperbolic trigonometric functions used in hyperDT"""
 
-from typing import Literal, Optional, TYPE_CHECKING
+from typing import Literal, Optional
 
 import numpy as np
-
-if TYPE_CHECKING:
-    from .cache import SplitCache
 
 
 def _dist(x1: float, x2: float) -> float:
@@ -81,7 +78,7 @@ def get_candidates(
     dim: int,
     timelike_dim: int,
     method: Literal["hyperbolic", "bisect"] = "hyperbolic",
-    cache: Optional[SplitCache] = None,
+    cache: Optional["SplitCache"] = None,
 ) -> np.ndarray:
     """
     Get candidate split points for hyperbolic decision tree

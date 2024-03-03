@@ -23,10 +23,10 @@ def bad_points(points: np.ndarray, base_points: np.ndarray, manifold: Hyperbolic
 
 
 def wrapped_normal_mixture(
-    num_points: int,
-    num_classes: int,
+    num_points: int = 1000,
+    num_classes: int = 2,
+    num_dims: int = 2,
     noise_std: float = 1.0,
-    n_dim: int = 2,
     default_coords_type: Literal["extrinsic", "ball", "half-space"] = "extrinsic",
     seed: Optional[int] = None,
     adjust_for_dim: bool = True,
@@ -37,13 +37,13 @@ def wrapped_normal_mixture(
     Args:
     -----
     num_points: int
-        Number of points to generate
+        Number of points to generate (default: 1000)
     num_classes: int
-        Number of classes in the mixture
+        Number of classes in the mixture (default: 2)
+    num_dims: int
+        Dimension of the hyperboloid (default: 2)
     noise_std: float
         Scalar multiplier for the covariance matrices of each class (default: 1.0)
-    n_dim: int
-        Dimension of the hyperboloid (default: 2)
     default_coords_type: str
         Coordinates type for the hyperboloid (default: "extrinsic")
     seed: int
@@ -62,27 +62,27 @@ def wrapped_normal_mixture(
         np.random.seed(seed)
 
     # Make manifold
-    hyp = Hyperbolic(dim=n_dim, default_coords_type=default_coords_type)
-    origin = np.array([1.0] + [0.0] * n_dim)
+    hyp = Hyperbolic(dim=num_dims, default_coords_type=default_coords_type)
+    origin = np.array([1.0] + [0.0] * num_dims)
 
     # Generate random means; parallel transport from origin
     means = np.concatenate(
         [
             np.zeros(shape=(num_classes, 1)),
-            np.random.normal(size=(num_classes, n_dim)),
+            np.random.normal(size=(num_classes, num_dims)),
         ],
         axis=1,
     )
     means = hyp.metric.exp(tangent_vec=means, base_point=origin)
 
     # Generate random covariance matrices
-    covs = np.zeros((num_classes, n_dim, n_dim))
+    covs = np.zeros((num_classes, num_dims, num_dims))
     for i in range(num_classes):
-        covs[i] = np.random.normal(size=(n_dim, n_dim))
+        covs[i] = np.random.normal(size=(num_dims, num_dims))
         covs[i] = covs[i] @ covs[i].T
     covs = noise_std * covs
     if adjust_for_dim:
-        covs = covs / n_dim
+        covs = covs / num_dims
 
     # Generate random class probabilities
     probs = np.random.uniform(size=num_classes)
@@ -92,7 +92,7 @@ def wrapped_normal_mixture(
     classes = np.random.choice(num_classes, size=num_points, p=probs)
 
     # Sample the appropriate covariance matrix and make tangent vectors
-    vecs = [np.random.multivariate_normal(np.zeros(n_dim), covs[c]) for c in classes]
+    vecs = [np.random.multivariate_normal(np.zeros(num_dims), covs[c]) for c in classes]
     tangent_vecs = np.concatenate([np.zeros(shape=(num_points, 1)), vecs], axis=1)
 
     # Transport each tangent vector to its corresponding mean on the hyperboloid

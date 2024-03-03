@@ -43,7 +43,6 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         cache: Optional[SplitCache] = None,
     ) -> None:
 
-        unused_var = 42
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
