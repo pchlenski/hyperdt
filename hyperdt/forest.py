@@ -1,6 +1,6 @@
 """Hyperbolic random forest"""
 
-from typing import Tuple, Literal, Type
+from typing import Tuple, Literal, Type, Optional
 
 import numpy as np
 from scipy import stats
@@ -10,7 +10,6 @@ from tqdm import tqdm
 from joblib import Parallel, delayed
 
 from sklearn.base import BaseEstimator, ClassifierMixin
-from sklearn.ensemble import RandomForestClassifier
 
 from .tree import (
     DecisionTreeClassifier,
@@ -31,10 +30,10 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         min_samples_split: int = 2,
         min_samples_leaf: int = 1,
         criterion: Literal["gini"] = "gini",
-        weights: np.ndarray = None,
+        weights: Optional[np.ndarray] = None,
         n_jobs: int = -1,
-        tree_type: Type[DecisionTreeClassifier,] = DecisionTreeClassifier,
-        random_state: int = None,
+        tree_type: Type[DecisionTreeClassifier] = DecisionTreeClassifier,
+        random_state: Optional[int] = None,
         skip_hyperboloid_check: bool = False,
         angle_midpoint_method: Literal["hyperbolic", "bisect"] = "hyperbolic",
     ) -> None:
@@ -61,6 +60,9 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         # Check that the tree type is correct
         assert isinstance(self.trees[0], self.tree_type), "Tree type mismatch"
 
+        # Curvature
+        self.curvature: Optional[float] = None
+
     def _get_trees(self):
         return [self.tree_type(**self.tree_params) for _ in range(self.n_estimators)]
 
@@ -70,7 +72,9 @@ class RandomForestClassifier(BaseEstimator, ClassifierMixin):
         indices = np.random.choice(n_samples, n_samples, replace=True)
         return X[indices], y[indices]
 
-    def fit(self, X: np.ndarray, y: np.ndarray, use_tqdm: bool = False, seed: int = None) -> "RandomForestClassifier":
+    def fit(
+        self, X: np.ndarray, y: np.ndarray, use_tqdm: bool = False, seed: Optional[int] = None
+    ) -> "RandomForestClassifier":
         """
         Fit a decision tree to subsamples
 

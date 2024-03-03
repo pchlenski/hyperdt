@@ -1,13 +1,20 @@
 """Utilities for visualizing hyperbolic decision trees."""
 
-from typing import List, Tuple, Union, Literal
+from typing import List, Tuple, Union, Literal, Optional, TYPE_CHECKING
+
 
 import numpy as np
 import matplotlib.pyplot as plt
 
 from scipy.interpolate import interp1d
+from matplotlib.lines import Line2D
 
 from .conversions import convert
+
+if TYPE_CHECKING:
+    from matplotlib.axes import Axes
+    from hyperdt.tree import DecisionNode, HyperbolicDecisionTreeClassifier
+
 
 GRID_SIZE = 2001
 STYLES = ["solid", "dashed", "dotted", "dashdot", "solid", "dashed", "dotted", "dashdot"]  # Whatever
@@ -58,7 +65,10 @@ def _get_mask(boundary_dim: int, geodesic: np.ndarray) -> np.ndarray:
     boundary_dim = boundary_dim - 1  # Input is {1, 2} but want {0, 1}
     independent_dim = 1 - boundary_dim  # Assume {0, 1}
     geodesic_interp = interp1d(
-        geodesic[:, independent_dim], geodesic[:, boundary_dim], bounds_error=False, fill_value="extrapolate"
+        geodesic[:, independent_dim],
+        geodesic[:, boundary_dim],
+        bounds_error=False,
+        fill_value="extrapolate",  # type: ignore
     )
     geodesic_boundary = geodesic_interp(_yy)
     mask = _xx < geodesic_boundary
@@ -70,15 +80,15 @@ def _get_mask(boundary_dim: int, geodesic: np.ndarray) -> np.ndarray:
 def plot_boundary(
     boundary_dim: int,
     boundary_theta: float,
-    t_dim: int = None,
+    t_dim: int = -1,
     geometry: Literal["poincare", "klein"] = "poincare",
-    ax: "Axes" = None,
+    ax: Optional[Axes] = None,
     timelike_dim: int = 0,
     color: str = "red",
-    mask: np.ndarray = None,
+    mask: Optional[np.ndarray] = None,
     return_mask: bool = False,
     style: str = "solid",
-) -> Union["Axes", Tuple["Axes", np.ndarray]]:
+) -> Union[Axes, Tuple[Axes, np.ndarray]]:
     """
     Plot a single decision boundary of a hyperbolic decision tree
 
@@ -106,7 +116,7 @@ def plot_boundary(
         Line style for the decision boundary
     """
     # Set t_dim: we assume total number of dims is 3
-    if t_dim is None:
+    if t_dim == -1:
         dims = [0, 1, 2]
         dims.remove(boundary_dim)
         dims.remove(timelike_dim)
@@ -127,11 +137,12 @@ def plot_boundary(
 
     # Init figure
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 10))
+        _, ax = plt.subplots(figsize=(10, 10))
+    assert ax is not None  # For type checker
 
     # Verify geodesics lie inside unit circle:
     if np.all(np.linalg.norm(geodesic_points, axis=1) <= 1):
-        ax.plot(geodesic_points[:, 0], geodesic_points[:, 1], c=color, linestyle=style)
+        ax.plot(geodesic_points[:, 0], geodesic_points[:, 1], c=color, linestyle=style)  # type: ignore
     else:
         print(f"Geodesic points lie outside unit circle:\t{boundary_dim} {boundary_theta/np.pi:.3f}*pi {t_dim}")
 
@@ -142,15 +153,15 @@ def plot_boundary(
 
 
 def _plot_tree_recursive(
-    node: "DecisionNode",
-    ax: "Axes",
+    node: DecisionNode,
+    ax: Axes,
     colors: List[str],
-    mask: np.ndarray,
+    mask: Optional[np.ndarray],
     depth: int,
     n_classes: int,
     minkowski: bool = False,
     **kwargs,
-) -> "Axes":
+) -> Axes:
     """Plot the decision boundary of a node and its children recursively."""
     if node.value is not None:  # Leaf case
         _xx, _yy = np.meshgrid(np.linspace(-1, 1, 2001), np.linspace(-1, 1, 2001))
@@ -169,20 +180,21 @@ def _plot_tree_recursive(
         if mask is not None:
             image[mask] = (color[0], color[1], color[2], 0.5)
             image[~mask] = (0, 0, 0, 0)
-        ax.imshow(image, origin="lower", extent=[-1, 1, -1, 1], aspect="auto")
+        ax.imshow(image, origin="lower", extent=(-1, 1, -1, 1), aspect="auto")
         return ax
     else:
+        assert node.theta is not None  # For type checker
         theta = -node.theta if minkowski else node.theta
         ax, new_mask = plot_boundary(
-            boundary_dim=node.feature,
-            boundary_theta=theta,
+            boundary_dim=node.feature,  # type: ignore
+            boundary_theta=theta,  # type: ignore
             color=colors[depth],
             mask=mask,
             return_mask=True,
             ax=ax,
             style=STYLES[depth % len(STYLES)],
             **kwargs,
-        )
+        )  # type: ignore (type checker seems to break here)
         reuse = {
             "ax": ax,
             "colors": colors,
@@ -203,6 +215,7 @@ def _plot_tree_recursive(
         if minkowski:
             mask_left, mask_right = mask_right, mask_left
 
+        assert node.left is not None and node.right is not None  # For type checker
         ax = _plot_tree_recursive(node.left, mask=mask_left, **reuse)
         ax = _plot_tree_recursive(node.right, mask=mask_right, **reuse)
         return ax
@@ -215,7 +228,7 @@ def _val_to_index(val: float):
     return int(val * 1000) - 1001
 
 
-def _apply_mask(x: float, y: float, mask: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def _apply_mask(x: np.ndarray, y: np.ndarray, mask: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Apply a mask to x and y coordinates."""
     assert len(x) == len(y)
     x_out = []
@@ -230,15 +243,15 @@ def _apply_mask(x: float, y: float, mask: np.ndarray) -> Tuple[np.ndarray, np.nd
 
 
 def plot_tree(
-    hdt: "HyperbolicDecisionTree",
-    X: np.ndarray = None,
-    y: np.ndarray = None,
+    hdt: HyperbolicDecisionTreeClassifier,
+    X: Optional[np.ndarray] = None,
+    y: Optional[np.ndarray] = None,
     geometry: Literal["poincare", "klein"] = "poincare",
     timelike_dim: int = 0,
     masked: bool = True,
-    ax: "Axes" = None,
+    ax: Optional[Axes] = None,
     **kwargs,
-) -> "Axes":
+) -> Axes:
     """
     Plot data and all decision boundaries of a hyperbolic decision tree.
 
@@ -262,17 +275,17 @@ def plot_tree(
         Additional keyword arguments to pass to plot_boundary
     """
     if ax is None:
-        fig, ax = plt.subplots(figsize=(10, 10))
+        _, ax = plt.subplots(figsize=(10, 10))
+    assert ax is not None  # For type checker
 
     # Plot data
     if X is not None and y is not None:
         X = convert(X, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim)
-        ax.scatter(X[:, 0], X[:, 1], c=y, cmap="viridis", marker="o", s=49, edgecolors="k", linewidths=1)
+        ax.scatter(
+            X[:, 0], X[:, 1], c=y, cmap="viridis", marker="o", s=49, edgecolors="k", linewidths=1  # type: ignore
+        )
 
     # Get colors
-    # colors = list(plt.cm.get_cmap("Reds", hdt.max_depth).colors)
-    # cmap = plt.cm.get_cmap("gist_heat", hdt.max_depth * 2)  # 2x keeps colors from being too light
-    # colors = [cmap(i) for i in range(hdt.max_depth)]
     colors = ["red"] * hdt.max_depth
 
     # Initialize mask: 2001x2001 grid makes rounding work in the _apply_mask lookups
@@ -291,7 +304,7 @@ def plot_tree(
         minkowski=(hdt.dot_product == "sparse_minkowski"),
         **kwargs,
     )
-    ax.legend(handles=[plt.Line2D([0], [0], color=c, label=f"Depth {i}") for i, c in enumerate(colors)])
+    ax.legend(handles=[Line2D([0], [0], color=c, label=f"Depth {i}") for i, c in enumerate(colors)])
 
     # Draw unit circle
     _x = np.linspace(-1, 1, 1000)
@@ -300,7 +313,7 @@ def plot_tree(
     ax.plot(_x, -_y, c="black")
 
     # Set axis limits
-    ax.set_xlim([-1.1, 1.1])
-    ax.set_ylim([-1.1, 1.1])
+    ax.set_xlim((-1.1, 1.1))
+    ax.set_ylim((-1.1, 1.1))
 
     return ax

@@ -1,6 +1,7 @@
 """Hyperbolic decision tree model"""
 
-from typing import Tuple, List, Union, Literal
+from typing import Tuple, Union, Literal, Optional
+from numpy.typing import NDArray
 
 import numpy as np
 
@@ -14,14 +15,19 @@ class DecisionNode:
     """Node in a decision tree. If value is not None, then the node is a leaf. Otherwise, it is an internal node."""
 
     def __init__(
-        self, value: Union[int, float, None] = None, probs: np.ndarray = None, feature: int = None, theta: float = None
+        self,
+        value: Optional[Union[int, float]] = None,
+        probs: Optional[NDArray[np.float32]] = None,
+        feature: Optional[int] = None,
+        theta: Optional[float] = None,
     ) -> None:
         self.value = value
         self.probs = probs  # predicted class probabilities of all samples in the leaf
         self.feature = feature  # feature index
         self.theta = theta  # threshold
-        self.left = None
-        self.right = None
+        self.left: Optional[DecisionNode] = None
+        self.right: Optional[DecisionNode] = None
+        self.score: Optional[float] = None
 
 
 class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
@@ -33,10 +39,11 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         min_samples_leaf: int = 1,
         min_samples_split: int = 2,
         criterion: Literal["gini", "entropy", "misclassification"] = "gini",
-        weights: np.ndarray = None,
-        cache: SplitCache = None,
+        weights: Optional[NDArray[np.float32]] = None,
+        cache: Optional[SplitCache] = None,
     ) -> None:
 
+        unused_var = 42
         self.max_depth = max_depth
         self.min_samples_leaf = min_samples_leaf
         self.min_samples_split = min_samples_split
@@ -58,21 +65,25 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         # Cache management (not used in Euclidean case)
         self.cache = SplitCache() if cache is None else cache
 
-    def _get_probs(self, y: np.ndarray) -> np.ndarray:
+        # For compatibility with tree method:
+        self.curvature = 0
+
+    def _get_probs(self, y: NDArray[np.int32]) -> NDArray[np.float32]:
         """Get the class probabilities"""
         # Convert y labels into indices in self.classes_
         # self.classes_ maintains the indexing that we want for all of our datapoints
-        y = np.searchsorted(self.classes_, y)
+        assert self.classes_ is not None  # for type checker
+        y = np.searchsorted(self.classes_, y)  # type: ignore
         return np.bincount(y, minlength=len(self.classes_)) / len(y)
 
     def _gini(self, y: np.ndarray) -> float:
         """Gini impurity"""
         if self.weights is not None:
-            return 1 - np.sum(self._get_probs(y) ** 2 * self.weights)
+            return float(1 - np.sum(self._get_probs(y) ** 2 * self.weights))
         else:
-            return 1 - np.sum(self._get_probs(y) ** 2)
+            return float(1 - np.sum(self._get_probs(y) ** 2))
 
-    def _information_gain(self, left: List[int], right: List[int], y: np.ndarray) -> float:
+    def _information_gain(self, left: np.ndarray, right: np.ndarray, y: np.ndarray) -> float:
         """Get the information gain from splitting on a given dimension"""
         y_l, y_r = y[left], y[right]
         w_l, w_r = len(y_l) / len(y), len(y_r) / len(y)
@@ -80,7 +91,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         child_loss = w_l * self._loss(y_l) + w_r * self._loss(y_r)
         return parent_loss - child_loss
 
-    def _get_split(self, X: np.ndarray, dim: int, theta: float) -> Tuple[List[int], List[int]]:
+    def _get_split(self, X: np.ndarray, dim: int, theta: float) -> Tuple[np.ndarray, np.ndarray]:
         """Get the indices of the split"""
         return X[:, dim] < theta, X[:, dim] >= theta
 
@@ -98,7 +109,9 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             return DecisionNode(value=value, probs=probs)
 
         # Recursively find the best split:
-        best_dim, best_theta, best_score = None, None, -1
+        best_dim, best_theta, best_score = -1, -1, -1
+
+        assert self.dims is not None  # for type checker
         for dim in self.dims:
             for theta in self._get_candidates(X=X, dim=dim):
                 left, right = self._get_split(X=X, dim=dim, theta=theta)
@@ -124,7 +137,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     def _leaf_values(self, y: np.ndarray) -> Tuple[int, np.ndarray]:
         """Return the value and probability of a leaf node"""
         probs = self._get_probs(y)
-        return np.argmax(probs), probs
+        return np.argmax(probs), probs  # type: ignore
 
     def fit(self, X: np.ndarray, y: np.ndarray) -> "DecisionTreeClassifier":
         """
@@ -159,13 +172,14 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def _left(self, x: np.ndarray, node: DecisionNode) -> bool:
         """Boolean: Go left?"""
-        return x[node.feature] < node.theta
+        return x[node.feature] < node.theta  # type: ignore
 
-    def _traverse(self, x: np.ndarray, node: DecisionNode = None) -> DecisionNode:
+    def _traverse(self, x: np.ndarray, node: Optional[DecisionNode] = None) -> DecisionNode:
         """Traverse a decision tree for a single point"""
         # Root case
         if node is None:
             node = self.tree
+        assert node is not None  # for type checker
 
         # Leaf case
         if node.value is not None:
@@ -187,7 +201,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         np.ndarray (n_samples,)
             Predicted labels for each sample in X
         """
-        return np.array([self.classes_[self._traverse(x).value] for x in X])
+        return np.array([self.classes_[self._traverse(x).value] for x in X])  # type: ignore
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         """
@@ -246,7 +260,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         self.skip_hyperboloid_check = skip_hyperboloid_check
         self.angle_midpoint_method = angle_midpoint_method  # 'hyperbolic' or 'bisect'
 
-    def _dot(self, X: np.ndarray, dim: int, theta: float) -> np.ndarray:
+    def _dot(self, X: NDArray[np.float32], dim: int, theta: float) -> NDArray[np.float32]:
         """Get the dot product(s) of the normal vector and the data"""
         if self.dot_product == "sparse":
             return np.sin(theta) * X[:, dim] - np.cos(theta) * X[:, self.timelike_dim]
@@ -259,21 +273,28 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         else:
             raise ValueError("Invalid dot product")
 
-    def _get_split(self, X: np.ndarray, dim: int, theta: float) -> Tuple[List[int], List[int]]:
+    def _get_split(self, X: NDArray[np.float32], dim: int, theta: float) -> Tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """Get the indices of the split"""
         p = self._dot(X, dim, theta)
         return p < 0, p >= 0
 
-    def _get_candidates(self, X: np.ndarray, dim: int) -> np.ndarray:
+    def _get_candidates(self, X: NDArray[np.float32], dim: int) -> NDArray[np.float32]:
         if self.candidates == "data":
             return get_candidates(
-                X=X, dim=dim, timelike_dim=self.timelike_dim, method=self.angle_midpoint_method, cache=self.cache
+                X=X,
+                dim=dim,
+                timelike_dim=self.timelike_dim,
+                method=self.angle_midpoint_method,  # type: ignore
+                cache=self.cache,
             )
 
         elif self.candidates == "grid":
             return np.linspace(np.pi / 4, 3 * np.pi / 4, 1000)
 
-    def _validate_hyperbolic(self, X: np.ndarray) -> None:
+        else:
+            raise ValueError("Invalid candidates")
+
+    def _validate_hyperbolic(self, X: NDArray[np.float32]) -> None:
         """
         Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
         of all spacelike squares, to simplify indexing.
@@ -294,10 +315,10 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         # Ensure hyperboloid
         if not np.all(X[:, self.timelike_dim] > np.linalg.norm(X[:, self.dims], axis=1)):
             raise ValueError(
-                "Points must lie on a hyperboloid: Value at timelike dimension must exceed norm of spacelike dimensions."
+                "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
             )
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "HyperbolicDecisionTreeClassifier":
+    def fit(self, X: NDArray[np.float32], y: NDArray[np.int32]) -> "HyperbolicDecisionTreeClassifier":
         """
         Fit a decision tree to the data
 
@@ -335,8 +356,10 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         self.tree = self._fit_node(X=X, y=y, depth=0)
         return self
 
-    def _left(self, x: np.ndarray, node: DecisionNode) -> bool:
+    def _left(self, x: NDArray[np.float32], node: DecisionNode) -> bool:
         """Boolean: Go left?"""
+        assert node.feature is not None  # for type checker
+        assert node.theta is not None  # for type checker
         return self._dot(x.reshape(1, -1), node.feature, node.theta).item() < 0
 
 
@@ -347,15 +370,15 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
         super().__init__(**kwargs)
         self._loss = self._mse
 
-    def _mse(self, y: np.ndarray) -> float:
+    def _mse(self, y: NDArray[np.float32]) -> float:
         """Mean squared error"""
-        return np.mean((y - np.mean(y)) ** 2)
+        return np.mean((y - np.mean(y)) ** 2)  # type: ignore
 
-    def _leaf_values(self, y: np.ndarray) -> Tuple[float, None]:
+    def _leaf_values(self, y: NDArray[np.float32]) -> Tuple[float, None]:
         """Return the value and probability (dummy) of a leaf node"""
-        return np.mean(y), None  # TODO: probs?
+        return np.mean(y), None  #  type: ignore
 
-    def predict(self, X: np.ndarray) -> np.ndarray:
+    def predict(self, X: NDArray[np.float32]) -> NDArray[np.float32]:
         """
         Predict regression values for samples in X
 
@@ -371,11 +394,13 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
         """
         return np.array([self._traverse(x).value for x in X])
 
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+    def predict_proba(self, X: NDArray[np.float32]) -> NDArray[np.float32]:
         """Predict class probabilities for samples in X (dummy)"""
         raise NotImplementedError("Regression does not support predict_proba")
 
-    def score(self, X: np.ndarray, y: np.ndarray, metric: Literal["mse", "rmse", "mae", "r2", "R2"] = "mse") -> float:
+    def score(
+        self, X: NDArray[np.float32], y: NDArray[np.float32], metric: Literal["mse", "rmse", "mae", "r2", "R2"] = "mse"
+    ) -> float:
         """
         Return the mean accuracy/score on the given test data and labels
 
@@ -395,15 +420,17 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
         """
         y_hat = self.predict(X)
         if metric == "mse":
-            return np.mean((y - y_hat) ** 2)
+            return float(np.mean((y - y_hat) ** 2))
         elif metric == "rmse":
-            return np.sqrt(np.mean((y - y_hat) ** 2))
+            return float(np.sqrt(np.mean((y - y_hat) ** 2)))
         elif metric == "mae":
-            return np.mean(np.abs(y - y_hat))
+            return float(np.mean(np.abs(y - y_hat)))
         elif metric in ["r2", "R2"]:
-            return 1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2)
+            return float(1 - np.sum((y - y_hat) ** 2) / np.sum((y - np.mean(y)) ** 2))
+        else:
+            raise ValueError("Invalid metric")
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "DecisionTreeRegressor":
+    def fit(self, X: NDArray[np.float32], y: NDArray[np.float32]) -> "DecisionTreeRegressor":
         """
         Fit a decision tree to the data. Wrapper for DecisionTreeClassifier's fit method but with a dummy
         self.classes_ attribute.

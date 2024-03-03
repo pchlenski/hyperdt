@@ -1,6 +1,6 @@
 """Toy data for hyperboloid classification"""
 
-from typing import Literal
+from typing import Tuple, Literal, Optional
 
 import numpy as np
 from geomstats.geometry.hyperbolic import Hyperbolic
@@ -28,9 +28,9 @@ def wrapped_normal_mixture(
     noise_std: float = 1.0,
     n_dim: int = 2,
     default_coords_type: Literal["extrinsic", "ball", "half-space"] = "extrinsic",
-    seed: int = None,
+    seed: Optional[int] = None,
     adjust_for_dim: bool = True,
-) -> np.ndarray:
+) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate points from a mixture of Gaussians on the hyperboloid.
 
