@@ -12,7 +12,7 @@ To install, run this from your repo directory:
 ```bash
 git clone https://github.com/pchlenski/hyperdt
 cd hyperdt
-pip install -e .`
+pip install -e .
 ```
 
 If you are installing with e.g. a conda environment or virtualenv, you can find exact dependencies in `requirements.txt`.
@@ -29,7 +29,7 @@ pip install hyperdt
 ```
 
 ## Tutorial
-A basic tutorial demonstrating key HyperDT functionality is available in `notebooks/tutrial.ipynb`.
+A basic tutorial demonstrating key HyperDT functionality is available in `notebooks/tutorial.ipynb`.
 
 ## Citation
 To cite HyperDT, please use the following:
