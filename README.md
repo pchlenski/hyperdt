@@ -1,10 +1,10 @@
 # hyperDT
 > Fast hyperboloid decision tree algorithms
 
-This repository contains code for the paper Fast Hyperboloid Decision Tree algorithms (ICLR 2024), which you can find
+This repository contains code for the paper Fast Hyperboloid Decision Tree Algorithms (ICLR 2024), which you can find
 at one of these links:
-(OpenReview)[https://openreview.net/forum?id=TTonmgTT9X]
-(ArXiv)[https://arxiv.org/abs/2310.13841]
+* [OpenReview](https://openreview.net/forum?id=TTonmgTT9X)
+* [ArXiv](https://arxiv.org/abs/2310.13841)
 
 ## Installation:
 ### Local install
