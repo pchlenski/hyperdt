@@ -8,7 +8,6 @@ import numpy as np
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from .hyperbolic_trig import get_candidates
-from .cache import SplitCache
 
 
 class DecisionNode:
@@ -40,7 +39,6 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         min_samples_split: int = 2,
         criterion: Literal["gini", "entropy", "misclassification"] = "gini",
         weights: Optional[NDArray[np.float32]] = None,
-        cache: Optional[SplitCache] = None,
     ) -> None:
 
         self.max_depth = max_depth
@@ -60,9 +58,6 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             self._loss = self._gini
         else:
             raise ValueError("Invalid criterion")
-
-        # Cache management (not used in Euclidean case)
-        self.cache = SplitCache() if cache is None else cache
 
         # For compatibility with tree method:
         self.curvature = 0
@@ -280,11 +275,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def _get_candidates(self, X: NDArray[np.float32], dim: int) -> NDArray[np.float32]:
         if self.candidates == "data":
             return get_candidates(
-                X=X,
-                dim=dim,
-                timelike_dim=self.timelike_dim,
-                method=self.angle_midpoint_method,  # type: ignore
-                cache=self.cache,
+                X=X, dim=dim, timelike_dim=self.timelike_dim, method=self.angle_midpoint_method  # type: ignore
             )
 
         elif self.candidates == "grid":

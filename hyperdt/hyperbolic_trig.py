@@ -74,11 +74,7 @@ def get_midpoint(
 
 
 def get_candidates(
-    X: np.ndarray,
-    dim: int,
-    timelike_dim: int,
-    method: Literal["hyperbolic", "bisect"] = "hyperbolic",
-    cache: Optional["SplitCache"] = None,
+    X: np.ndarray, dim: int, timelike_dim: int, method: Literal["hyperbolic", "bisect"] = "hyperbolic"
 ) -> np.ndarray:
     """
     Get candidate split points for hyperbolic decision tree
@@ -93,8 +89,6 @@ def get_candidates(
         Timelike dimension to project down onto
     method: str
         Method for finding midpoints
-    cache: SplitCache
-        Cache for split points
 
     Returns:
     --------
@@ -105,6 +99,7 @@ def get_candidates(
     thetas = np.unique(thetas)  # This also sorts
 
     # Get all pairs of angles
-    func = cache.cache_decorator(get_midpoint) if cache is not None else get_midpoint
-    candidates = np.array([func(theta1, theta2, method=method) for theta1, theta2 in zip(thetas[:-1], thetas[1:])])
+    candidates = np.array(
+        [get_midpoint(theta1, theta2, method=method) for theta1, theta2 in zip(thetas[:-1], thetas[1:])]
+    )
     return candidates
