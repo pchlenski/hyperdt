@@ -6,7 +6,7 @@ import torch
 
 def _get(seed, dimension, num_samples, convert_to_poincare=True, **kwargs):
     # Keep only abundant taxa
-    adata = anndata.read_h5ad("/home/phil/americangut/data/big_table_with_embeddings_fixed.h5ad")
+    adata = anndata.read_h5ad("data/raw/americangut.h5ad")
     labels = adata.var["taxonomy_1"]
     labels_counts = labels.value_counts()
     keep = labels_counts[labels_counts > 1000].index
