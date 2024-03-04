@@ -31,6 +31,11 @@ pip install hyperdt
 ## Tutorial
 A basic tutorial demonstrating key HyperDT functionality is available in `notebooks/tutorial.ipynb`.
 
+## Reproducibility
+All figures and tables in the paper were generated using a combination of Python scripts and Jupyter notebooks. The notebooks used in development were filtered down to only those that remained relevant to the final paper and moved to the `notebooks/archive` directory. The `notebooks` directory contains a tutorial and symbolic links to notebooks of particular relevance to a figure, table, or section of a paper, named according to the section they reproduce.
+
+`hororf_benchmarks.py` runs the benchmarks contributing to Tables 1, 5, and 6, and `scaling_benchmarks.py` runs the benchmarks contributing to Figures 6 and 7.
+
 ## Citation
 To cite HyperDT, please use the following:
 

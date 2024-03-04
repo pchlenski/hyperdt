@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="hyperdt",
-    version="0.0.2",
+    version="0.0.3",
     description="Fast Hyperboloid Decision Tree Algorithms",
     author="Philippe Chlenski",
     author_email="pac@cs.columbia.edu",
