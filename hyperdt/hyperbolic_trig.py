@@ -45,6 +45,11 @@ def _hyperbolic_midpoint(a: float, b: float) -> float:
     """New method: analytical closed forms for hyperbolic midpoint"""
     if np.isclose(a, b):
         return a
+
+    # Special case for when a + b is very close to π
+    if np.isclose(a + b, np.pi, atol=1e-10):
+        return np.pi / 2  # Consistent value when angles are in [-π/4, π/4]
+
     v = np.sin(2 * a - 2 * b) / (np.sin(a + b) * np.sin(b - a))
     coef = -1 if a < np.pi - b else 1
     sol = (-v + coef * np.sqrt(v**2 - 4)) / 2
