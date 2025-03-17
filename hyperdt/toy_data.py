@@ -27,7 +27,6 @@ def wrapped_normal_mixture(
     num_classes: int = 2,
     num_dims: int = 2,
     noise_std: float = 1.0,
-    default_coords_type: Literal["extrinsic", "ball", "half-space"] = "extrinsic",
     seed: Optional[int] = None,
     adjust_for_dim: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -44,8 +43,6 @@ def wrapped_normal_mixture(
         Dimension of the hyperboloid (default: 2)
     noise_std: float
         Scalar multiplier for the covariance matrices of each class (default: 1.0)
-    default_coords_type: str
-        Coordinates type for the hyperboloid (default: "extrinsic")
     seed: int
         Random seed (default: None)
     adjust_for_dim: bool
@@ -62,7 +59,7 @@ def wrapped_normal_mixture(
         np.random.seed(seed)
 
     # Make manifold
-    hyp = Hyperbolic(dim=num_dims, default_coords_type=default_coords_type)
+    hyp = Hyperbolic(dim=num_dims, coords_type="extrinsic")
     origin = np.array([1.0] + [0.0] * num_dims)
 
     # Generate random means; parallel transport from origin
