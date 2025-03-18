@@ -125,8 +125,12 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Initialize the estimator with appropriate parameters
         self.estimator_ = estimator_class(**kwargs)
 
-    def _get_tags(self):
-        """Return estimator tags."""
+    @property
+    def __sklearn_tags__(self):
+        """Return estimator tags.
+        
+        This property is used by scikit-learn >= 1.7.
+        """
         # Import inside method to avoid circular imports
         import sklearn
         # Use importlib.metadata instead of pkg_resources
@@ -179,6 +183,11 @@ class HyperbolicDecisionTree(BaseEstimator):
             tags['array_api_support'] = False  # Added in 1.4+
         
         return tags
+        
+    # Keep the _get_tags method for backward compatibility with older sklearn versions
+    def _get_tags(self):
+        """Return estimator tags for scikit-learn < 1.7."""
+        return self.__sklearn_tags__
     
     def _validate_hyperbolic(self, X: np.ndarray) -> None:
         """
@@ -239,8 +248,11 @@ class HyperbolicDecisionTree(BaseEstimator):
         out : ndarray, sparse matrix, or tuple of these
             The validated input. A tuple is returned if `y` is not None.
         """
+        # Get tags using the new property to avoid AttributeError with sklearn >= 1.7
+        tags = self.__sklearn_tags__
+        
         # If we are predicting (y is None), override the requires_y tag check
-        if y is None and hasattr(self, '_get_tags') and self._get_tags().get('requires_y', False):
+        if y is None and tags.get('requires_y', False):
             # For prediction, just validate X without requiring y
             X_array = check_array(X, **check_params)
             if reset:
