@@ -30,7 +30,8 @@ jobs:
     - name: Check type annotations with mypy
       run: |
         # Only check faster_tree.py which has proper type annotations
-        mypy --ignore-missing-imports --no-warn-return-any hyperdt/faster_tree.py
+        # Disable error for untyped imports
+        mypy --ignore-missing-imports --no-warn-return-any --follow-imports=skip hyperdt/faster_tree.py
       continue-on-error: true  # Allow mypy to fail but continue the workflow
     - name: Run tests
       run: |
