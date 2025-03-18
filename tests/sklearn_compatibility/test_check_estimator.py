@@ -128,7 +128,7 @@ def test_hyperbolic_estimators_in_sklearn_pipeline():
     
     # Test classifier in pipeline with actual HyperbolicDecisionTreeClassifier
     # Skip hyperboloid check since we're generating valid data
-    from hyperdt.faster_tree import HyperbolicDecisionTreeClassifier, HyperbolicDecisionTreeRegressor
+    # Using the already imported classes from hyperdt, not repetitive import
     
     # Test with real estimators, not just the compatibility ones
     clf_pipe = Pipeline([
