@@ -14,6 +14,10 @@ coverage:
         threshold: 10%  # More lenient threshold for status checks
         informational: true  # Make coverage status checks informational only
 
+ignore:
+  - "hyperdt/legacy/**"    # Exclude all legacy code from coverage including subdirectories
+  - "hyperdt/legacy/*.py"  # Explicitly exclude Python files in the legacy directory itself
+
 parsers:
   gcov:
     branch_detection:
