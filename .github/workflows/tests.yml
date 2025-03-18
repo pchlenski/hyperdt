@@ -43,6 +43,9 @@ jobs:
         # Create needed directories for tests
         mkdir -p tests/equivalence/images
         # Run the subset of tests that are more likely to pass
+        # Note: We ensure there's no import from faster_tree.py which was refactored
+        echo "Checking no legacy imports..."
+        ! grep -r "from hyperdt.faster_tree import" --include="*.py" tests/typing tests/models
         pytest tests/typing/test_typing.py tests/models/test_model_types.py -v --cov=hyperdt
     - name: Test sklearn compatibility
       run: |
