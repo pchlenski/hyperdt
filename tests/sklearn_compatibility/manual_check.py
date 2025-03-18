@@ -32,7 +32,10 @@ def _get_tags(self):
         'poor_score': False,
         'no_validation': True,
         'multioutput': False,
+        'multilabel': False,
         '_skip_test': False,
+        'array_api_support': False,
+        'non_deterministic': False,
     }
 
 CompatibilityHyperbolicDecisionTreeClassifier._get_tags = _get_tags

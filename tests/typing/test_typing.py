@@ -25,9 +25,19 @@ except ImportError:
     XGBOOST_AVAILABLE = False
 
 # Create dummy data with proper shapes for type checking
+# Generate data that satisfies hyperboloid constraints
 n_samples = 100
 n_features = 5
-X = np.random.random((n_samples, n_features))
+
+# Generate proper hyperboloid data
+# First generate points in ambient space (excluding timelike dimension)
+X_ambient = np.random.randn(n_samples, n_features - 1)
+# Compute timelike coordinate to place points on hyperboloid (x₀² - x₁² - ... - xₙ² = 1)
+spacelike_norm_squared = np.sum(X_ambient**2, axis=1)
+timelike = np.sqrt(spacelike_norm_squared + 1.0)
+# Combine to form hyperboloid points
+X = np.column_stack([timelike, X_ambient])
+
 y_class = np.random.randint(0, 3, size=n_samples)
 y_reg = np.random.random(n_samples)
 

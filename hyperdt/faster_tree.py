@@ -128,7 +128,10 @@ class HyperbolicDecisionTree(BaseEstimator):
             'no_validation': True,  # We do our own validation for hyperboloid constraints
             'pairwise': False,
             'multioutput': False,
+            'multilabel': False,  # Do not support multilabel classification
             'requires_fit': True,
+            'array_api_support': False,  # Do not support array API objects
+            'non_deterministic': False,  # Our estimators are deterministic given a fixed random seed
             
             # Explicitly skip tests that don't apply to hyperbolic space
             '_skip_test': False,
