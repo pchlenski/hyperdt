@@ -49,9 +49,9 @@ jobs:
         # Run the subset of tests that are more likely to pass
         # Note: We ensure there's no import from faster_tree.py which was refactored
         echo "Checking no legacy imports..."
-        ! grep -r "from hyperdt.faster_tree import" --include="*.py" tests/typing tests/models
+        ! grep -r "from hyperdt.faster_tree import" --include="*.py" tests/typing tests/models tests/data_utils
         echo "Running tests..."
-        pytest tests/typing/test_typing.py tests/models/test_model_types.py -v --cov=hyperdt
+        pytest tests/typing/test_typing.py tests/models/test_model_types.py tests/data_utils/test_toy_data.py -v --cov=hyperdt
     - name: Test sklearn compatibility
       run: |
         python tests/sklearn_compatibility/manual_check.py
@@ -59,7 +59,7 @@ jobs:
     - name: Generate coverage report
       run: |
         # Generate coverage report with explicit output path
-        pytest tests/typing/test_typing.py tests/models/test_model_types.py --cov=hyperdt --cov-report=xml:coverage.xml
+        pytest tests/typing/test_typing.py tests/models/test_model_types.py tests/data_utils/test_toy_data.py --cov=hyperdt --cov-report=xml:coverage.xml
         # List files to confirm coverage.xml exists
         ls -la
     - name: Upload coverage to Codecov
