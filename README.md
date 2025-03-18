@@ -1,6 +1,16 @@
 # hyperDT
 > Fast hyperboloid decision tree algorithms
 
+[![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/github/license/pchlenski/hyperdt)](https://github.com/pchlenski/hyperdt/blob/main/LICENSE)
+[![PyPI version](https://badge.fury.io/py/hyperdt.svg)](https://badge.fury.io/py/hyperdt)
+[![Tests](https://github.com/pchlenski/hyperdt/actions/workflows/tests.yml/badge.svg)](https://github.com/pchlenski/hyperdt/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/pchlenski/hyperdt/branch/main/graph/badge.svg)](https://codecov.io/gh/pchlenski/hyperdt)
+[![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+[![Mypy: Checked](https://img.shields.io/badge/mypy-checked-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/typing/README.md)
+[![sklearn: Compatible](https://img.shields.io/badge/sklearn-compatible-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/sklearn_compatibility/README.md)
+[![ICLR 2024](https://img.shields.io/badge/ICLR-2024-blueviolet.svg)](https://openreview.net/forum?id=TTonmgTT9X)
+
 This repository contains code for the paper Fast Hyperboloid Decision Tree Algorithms (ICLR 2024), which you can find
 at one of these links:
 * [OpenReview](https://openreview.net/forum?id=TTonmgTT9X)
