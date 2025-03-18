@@ -61,7 +61,7 @@ def run_manual_check():
     print("Testing with check_estimator (some tests are expected to fail)")
     try:
         # Import our modified estimator which should fail cleanly
-        from hyperdt.faster_tree import HyperbolicDecisionTreeClassifier
+        from hyperdt import HyperbolicDecisionTreeClassifier
         clf = HyperbolicDecisionTreeClassifier()
         check_estimator(clf)
     except Exception as e:
@@ -74,7 +74,7 @@ def run_manual_check():
     X, y_class, y_reg = generate_hyperbolic_data(n_samples=100, n_features=5, random_state=42)
     
     # Test with real estimators from hyperdt
-    from hyperdt.faster_tree import HyperbolicDecisionTreeClassifier
+    from hyperdt import HyperbolicDecisionTreeClassifier
     
     # Test classifier pipeline
     pipe = Pipeline([

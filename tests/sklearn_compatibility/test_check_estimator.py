@@ -12,7 +12,7 @@ import os
 # Add the parent directory to the path to import hyperdt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from hyperdt.faster_tree import (
+from hyperdt import (
     HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,

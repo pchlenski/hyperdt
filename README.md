@@ -64,10 +64,11 @@ A basic tutorial demonstrating key HyperDT functionality is available in `notebo
 
 The hyperDT package is structured as follows:
 
-- `hyperdt/faster_tree.py`: The main implementation with scikit-learn compatible interfaces and optimized performance
-- `hyperdt/legacy/`: Module containing the original implementation that uses geomstats (requires `pip install hyperdt[legacy]`)
-- `hyperdt/conversions.py`: Utilities for converting between different hyperbolic coordinate systems
-- `hyperdt/visualization.py`: Tools for visualizing hyperbolic decision trees
+- `hyperdt/_base.py`: Base classes for hyperbolic decision trees
+- `hyperdt/tree.py`: HyperbolicDecisionTreeClassifier and HyperbolicDecisionTreeRegressor 
+- `hyperdt/ensemble.py`: HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
+- `hyperdt/_xgboost.py`: XGBoost integration (requires `pip install hyperdt[xgboost]`)
+- `hyperdt/legacy/`: Original implementation (requires `pip install hyperdt[legacy]`)
 - `hyperdt/toy_data.py`: Utilities for generating synthetic hyperbolic datasets
 
 The package has a modular design with optional dependencies:
