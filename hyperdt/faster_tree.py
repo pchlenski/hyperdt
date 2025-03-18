@@ -234,13 +234,22 @@ class HyperbolicDecisionTree(BaseEstimator):
         out : ndarray, sparse matrix, or tuple of these
             The validated input. A tuple is returned if `y` is not None.
         """
-        # First, try to use sklearn's BaseEstimator._validate_data if it exists
+        # If we are predicting (y is None), override the requires_y tag check
+        if y is None and hasattr(self, '_get_tags') and self._get_tags().get('requires_y', False):
+            # For prediction, just validate X without requiring y
+            X_array = check_array(X, **check_params)
+            if reset:
+                self.n_features_in_ = X_array.shape[1]
+            return X_array
+        
+        # Otherwise use the standard validation
         try:
+            # First, try to use sklearn's BaseEstimator._validate_data if it exists
             result = super()._validate_data(X, y, reset=reset, 
                                          validate_separately=validate_separately, 
                                          **check_params)
             return result
-        except (AttributeError, TypeError) as e:
+        except (AttributeError, TypeError):
             # If parent method doesn't exist, implement our own validation
             if y is None:
                 X_array = check_array(X, **check_params)
