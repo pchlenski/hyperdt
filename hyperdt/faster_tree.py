@@ -20,9 +20,14 @@ except ImportError:
     XGBOOST_AVAILABLE = False
 
 # Define custom type aliases for array shapes
-NDArraySamples = NDArray  # 1D array of samples
-NDArraySamplesFeatures = NDArray  # 2D array of samples x features
-NDArraySamplesClasses = NDArray  # 2D array of samples x classes
+from typing import TypeVar, Union, Any, Type
+import numpy.typing as npt
+
+# Type aliases for type checking
+T = TypeVar('T', bound=np.generic)
+NDArraySamples = npt.NDArray[np.float64]  # 1D array of samples
+NDArraySamplesFeatures = npt.NDArray[np.float64]  # 2D array of samples x features 
+NDArraySamplesClasses = npt.NDArray[np.float64]  # 2D array of samples x classes
 
 
 class HyperbolicDecisionTree(BaseEstimator):
@@ -119,7 +124,12 @@ class HyperbolicDecisionTree(BaseEstimator):
         """Return estimator tags."""
         # Import inside method to avoid circular imports
         import sklearn
-        from pkg_resources import parse_version
+        # Use importlib.metadata instead of pkg_resources
+        try:
+            from importlib.metadata import version as parse_version
+        except ImportError:
+            # Fallback for Python < 3.8
+            from pkg_resources import parse_version
         
         # Base tags for all scikit-learn versions
         tags = {
@@ -149,13 +159,17 @@ class HyperbolicDecisionTree(BaseEstimator):
         }
         
         # Add version-specific tags
-        if parse_version(sklearn.__version__) >= parse_version('1.0.0'):
+        sklearn_version = sklearn.__version__
+        
+        # Add version-specific tags
+        if float(sklearn_version.split('.')[0]) >= 1:
             tags['multilabel'] = False  # Added in 1.0+
             
-        if parse_version(sklearn.__version__) >= parse_version('1.3.0'):
+        major, minor = map(int, sklearn_version.split('.')[:2])
+        if (major >= 1 and minor >= 3) or major > 1:
             tags['non_deterministic'] = False  # Added in 1.3+
             
-        if parse_version(sklearn.__version__) >= parse_version('1.4.0'):
+        if (major >= 1 and minor >= 4) or major > 1:
             tags['array_api_support'] = False  # Added in 1.4+
         
         return tags
