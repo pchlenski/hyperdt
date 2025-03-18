@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 import sys
 
 sys.path.append("..")
-from src.hyperdt.conversions import convert
+from hyperdt.legacy.conversions import convert
 
 
 def _get(seed, dimension):

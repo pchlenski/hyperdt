@@ -7,8 +7,8 @@ from sklearn.model_selection import train_test_split
 import sys
 
 sys.path.append("..")
-from src.hyperdt.toy_data import wrapped_normal_mixture
-from src.hyperdt.conversions import convert
+from hyperdt.toy_data import wrapped_normal_mixture
+from hyperdt.legacy.conversions import convert
 
 # Need for bad_points:
 import geomstats.backend as gs

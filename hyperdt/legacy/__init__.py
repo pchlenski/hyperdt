@@ -7,7 +7,6 @@ and other legacy algorithms that may have different dependencies.
 try:
     # Import core tree components
     from .tree import (
-        HyperbolicDecisionTree,
         HyperbolicDecisionTreeClassifier,
         HyperbolicDecisionTreeRegressor,
     )
