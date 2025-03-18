@@ -33,8 +33,7 @@ Results will be saved to `/home/phil/hyperdt/tests/equivalence/images/`.
 ## Directory Structure
 
 - `test_equivalence.py`: Consolidated test suite that runs all verification tests
-- `images/`: Contains visualizations of decision boundaries, performance comparisons, etc.
-- `results/`: Contains additional result data
+- `images/`: Contains all visualizations and result plots
 - `archive/`: Contains original individual test files for reference
 
 ## Detailed Explanation

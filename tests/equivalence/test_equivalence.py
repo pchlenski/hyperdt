@@ -31,9 +31,7 @@ from hyperdt.toy_data import wrapped_normal_mixture
 IMAGES_DIR = Path("/home/phil/hyperdt/tests/equivalence/images")
 IMAGES_DIR.mkdir(exist_ok=True)
 
-# Create directory for test results
-RESULTS_DIR = Path("/home/phil/hyperdt/tests/equivalence/results")
-RESULTS_DIR.mkdir(exist_ok=True)
+# All results will be saved to the images directory
 
 
 def generate_hyperbolic_data(n_samples, n_classes=2, n_features=3, random_state=None):
