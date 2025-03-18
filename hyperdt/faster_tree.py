@@ -144,6 +144,7 @@ class HyperbolicDecisionTree(BaseEstimator):
             'pairwise': False,
             'multioutput': False,
             'requires_fit': True,
+            'requires_y': True,  # This estimator requires y for fitting
             
             # Explicitly skip tests that don't apply to hyperbolic space
             '_skip_test': False,
