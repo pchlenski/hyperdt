@@ -52,6 +52,12 @@ class HyperbolicDecisionTree(BaseEstimator):
     ----------
     estimator_ : object
         The underlying fitted estimator instance.
+    n_features_in_ : int
+        The number of features seen during fit.
+    feature_names_in_ : ndarray of shape (`n_features_in_`,)
+        Names of features seen during fit. Defined only when X has feature names that are all strings.
+    classes_ : ndarray of shape (n_classes,)
+        The classes labels. Only available for classification tasks.
     """
 
     def __init__(
@@ -109,6 +115,19 @@ class HyperbolicDecisionTree(BaseEstimator):
 
         self.estimator_ = estimator_class(**kwargs)
 
+    def _get_tags(self):
+        """Return estimator tags."""
+        return {
+            'allow_nan': False,
+            'handles_1d_data': False,
+            'requires_positive_X': False,
+            'requires_positive_y': False,
+            'X_types': ['2darray'],
+            'poor_score': False,
+            'no_validation': False,
+            'pairwise': False,
+        }
+    
     def _validate_hyperbolic(self, X: NDArraySamplesFeatures) -> None:
         """
         Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
@@ -121,24 +140,87 @@ class HyperbolicDecisionTree(BaseEstimator):
             
         Raises
         ------
-        AssertionError
+        ValueError
             If the points do not lie on a hyperboloid with the specified curvature.
         """
+        # Check dimensions
+        if X.shape[1] <= self.timelike_dim:
+            raise ValueError(f"Timelike dimension index {self.timelike_dim} is out of bounds for data with {X.shape[1]} dimensions")
+        
         dims = np.delete(np.arange(X.shape[1]), self.timelike_dim)
+        
         # Ensure Minkowski norm
-        assert np.allclose(
-            np.sum(X[:, dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2, -1 / self.curvature, atol=1e-3
-        ), f"Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}."
+        minkowski_norm = np.sum(X[:, dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2
+        if not np.allclose(minkowski_norm, -1 / self.curvature, atol=1e-3):
+            raise ValueError(f"Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}.")
 
         # Ensure timelike
-        assert np.all(
-            X[:, self.timelike_dim] > 1.0 / self.curvature
-        ), "Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1."
+        if not np.all(X[:, self.timelike_dim] > 1.0 / self.curvature):
+            raise ValueError("Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1.")
 
         # Ensure hyperboloid
-        assert np.all(
-            X[:, self.timelike_dim] > np.linalg.norm(X[:, dims], axis=1)
-        ), "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
+        if not np.all(X[:, self.timelike_dim] > np.linalg.norm(X[:, dims], axis=1)):
+            raise ValueError("Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims.")
+            
+    def _validate_data(self, X, y=None, reset=True, validate_separately=False, **check_params):
+        """Validate input data and set or check the `n_features_in_` attribute.
+        
+        Parameters
+        ----------
+        X : {array-like, sparse matrix, dataframe} of shape (n_samples, n_features)
+            The input samples.
+        y : array-like of shape (n_samples,), default=None
+            The targets. If None, `check_array` is called on `X` and
+            `check_X_y` is called otherwise.
+        reset : bool, default=True
+            Whether to reset the `n_features_in_` attribute.
+            If False, the input will be checked for consistency with data
+            provided when reset was last True.
+        validate_separately : bool, default=False
+            If True, call validate_X_y separately on X and y. This is
+            useful in cases where y contains more information to conduct 
+            the validation.
+        **check_params : kwargs
+            Parameters passed to :func:`sklearn.utils.check_array` or
+            :func:`sklearn.utils.check_X_y`.
+            
+        Returns
+        -------
+        X_validated : ndarray
+            The validated input.
+        y_validated : ndarray or None
+            The validated target if provided, None otherwise.
+        """
+        # Handle y=None
+        if y is None:
+            if self.timelike_dim >= X.shape[1]:
+                raise ValueError(f"Timelike dimension index {self.timelike_dim} exceeds data dimensions {X.shape[1]}")
+                
+            X_array = check_array(X, **check_params)
+            if reset:
+                self.n_features_in_ = X_array.shape[1]
+                if hasattr(X, "columns") and hasattr(X.columns, "tolist"):
+                    self.feature_names_in_ = np.array(X.columns.tolist(), dtype=object)
+            return X_array
+        
+        # Both X and y are provided
+        if validate_separately:
+            X_array = check_array(X, **check_params)
+            y_array = check_array(y, ensure_2d=False, **check_params)
+        else:
+            X_array, y_array = check_X_y(X, y, **check_params)
+        
+        # Set n_features_in_
+        if reset:
+            self.n_features_in_ = X_array.shape[1]
+            if hasattr(X, "columns") and hasattr(X.columns, "tolist"):
+                self.feature_names_in_ = np.array(X.columns.tolist(), dtype=object)
+            
+            # For classification tasks, store classes
+            if self.task == "classification":
+                self.classes_ = np.unique(y_array)
+        
+        return X_array, y_array
 
     def _einstein_midpoint(self, u: float, v: float) -> float:
         """
@@ -256,12 +338,22 @@ class HyperbolicDecisionTree(BaseEstimator):
         self : object
             Fitted estimator.
         """
-        # Validate input
-        X_array = check_array(X, dtype=np.float64)
-        X_array, y_array = check_X_y(X_array, y, multi_output=False)
+        # Validate input data
+        X_array, y_array = self._validate_data(
+            X, y, 
+            accept_sparse=False, 
+            dtype=np.float64, 
+            ensure_2d=True, 
+            force_all_finite=True, 
+            multi_output=False
+        )
         
+        # Check hyperboloid constraints if needed
         if not self.skip_hyperboloid_check:
-            self._validate_hyperbolic(X_array)
+            try:
+                self._validate_hyperbolic(X_array)
+            except (ValueError, AssertionError) as e:
+                raise ValueError(f"Input data does not satisfy hyperboloid constraints: {str(e)}")
 
         # Convert to Klein coordinates (x_d/x_0)
         x0 = X_array[:, self.timelike_dim]
@@ -294,13 +386,24 @@ class HyperbolicDecisionTree(BaseEstimator):
             The predicted classes or values.
         """
         # Check if fit has been called
-        check_is_fitted(self, attributes=["estimator_"])
+        check_is_fitted(self, attributes=["estimator_", "n_features_in_"])
         
         # Validate input
-        X_array = check_array(X, dtype=np.float64)
+        X_array = self._validate_data(
+            X, 
+            reset=False, 
+            accept_sparse=False, 
+            dtype=np.float64, 
+            ensure_2d=True,
+            force_all_finite=True
+        )
         
+        # Check hyperboloid constraints if needed
         if not self.skip_hyperboloid_check:
-            self._validate_hyperbolic(X_array)
+            try:
+                self._validate_hyperbolic(X_array)
+            except (ValueError, AssertionError) as e:
+                raise ValueError(f"Input data does not satisfy hyperboloid constraints: {str(e)}")
 
         # Convert to Klein coordinates
         x0 = X_array[:, self.timelike_dim]
@@ -334,14 +437,26 @@ class HyperbolicDecisionTree(BaseEstimator):
             raise AttributeError("predict_proba is not available for regression tasks")
 
         # Check if fit has been called
-        check_is_fitted(self, attributes=["estimator_"])
+        check_is_fitted(self, attributes=["estimator_", "n_features_in_"])
         
         # Validate input
-        X_array = check_array(X, dtype=np.float64)
+        X_array = self._validate_data(
+            X, 
+            reset=False, 
+            accept_sparse=False, 
+            dtype=np.float64, 
+            ensure_2d=True,
+            force_all_finite=True
+        )
         
+        # Check hyperboloid constraints if needed
         if not self.skip_hyperboloid_check:
-            self._validate_hyperbolic(X_array)
+            try:
+                self._validate_hyperbolic(X_array)
+            except (ValueError, AssertionError) as e:
+                raise ValueError(f"Input data does not satisfy hyperboloid constraints: {str(e)}")
 
+        # Convert to Klein coordinates
         x0 = X_array[:, self.timelike_dim]
         X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
 
