@@ -113,11 +113,20 @@ class HyperbolicDecisionTree(BaseEstimator):
 
         estimator_class = backend_map[self.task][self.backend]
 
-        # Add max_depth parameter to kwargs if it's applicable
+        # Prepare keyword arguments based on backend type
         kwargs = self.kwargs.copy()
+        
+        # Backend-specific parameter handling
+        if self.backend == "sklearn_rf":
+            # RandomForest doesn't support 'splitter' parameter
+            if "splitter" in kwargs:
+                del kwargs["splitter"]
+        
+        # Add max_depth to supported backends
         if self.backend in ["sklearn_dt", "sklearn_rf", "xgboost"]:
             kwargs["max_depth"] = self.max_depth
 
+        # Initialize the estimator with appropriate parameters
         self.estimator_ = estimator_class(**kwargs)
 
     def _get_tags(self):
@@ -704,6 +713,7 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
         # Add n_estimators to kwargs
         kwargs["n_estimators"] = n_estimators
         
+        # Don't pass splitter parameter to RandomForestClassifier as it doesn't accept it
         super().__init__(
             backend="sklearn_rf",
             max_depth=max_depth,
@@ -712,6 +722,7 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
             criterion=criterion,
             skip_hyperboloid_check=skip_hyperboloid_check,
             random_state=random_state,
+            splitter=None,  # This will be ignored/removed in _init_estimator
             **kwargs,
         )
 
@@ -764,6 +775,7 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
         # Add n_estimators to kwargs
         kwargs["n_estimators"] = n_estimators
         
+        # Don't pass splitter parameter to RandomForestRegressor as it doesn't accept it
         super().__init__(
             backend="sklearn_rf",
             max_depth=max_depth,
@@ -772,6 +784,7 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
             criterion=criterion,
             skip_hyperboloid_check=skip_hyperboloid_check,
             random_state=random_state,
+            splitter=None,  # This will be ignored/removed in _init_estimator
             **kwargs,
         )
 
