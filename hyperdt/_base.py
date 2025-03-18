@@ -221,31 +221,41 @@ class HyperbolicDecisionTree(BaseEstimator):
         out : ndarray, sparse matrix, or tuple of these
             The validated input. A tuple is returned if `y` is not None.
         """
+        # Create safe parameters - remove problematic ones for compatibility
+        safe_params = check_params.copy()
+        # Remove parameters that might cause issues in different sklearn versions
+        if 'ensure_all_finite' in safe_params:
+            safe_params.pop('ensure_all_finite')
+        if 'force_all_finite' in safe_params:
+            safe_params.pop('force_all_finite')
+        
         # Access tags directly from class attribute
         # If we are predicting (y is None), override the requires_y tag check
         if y is None and self.__sklearn_tags__.get('requires_y', False):
             # For prediction, just validate X without requiring y
-            X_array = check_array(X, **check_params)
+            X_array = check_array(X, **safe_params)
             if reset:
                 self.n_features_in_ = X_array.shape[1]
             return X_array
         
-        # Otherwise use the standard validation
+        # Use the parent method for validation if possible
         try:
-            # First, try to use sklearn's BaseEstimator._validate_data if it exists
+            # Try to use parent's _validate_data 
+            # This will trigger a FutureWarning in sklearn 1.6+ but that's acceptable 
+            # during the transition period
             result = super()._validate_data(X, y, reset=reset, 
-                                         validate_separately=validate_separately, 
-                                         **check_params)
+                                        validate_separately=validate_separately, 
+                                        **safe_params)
             return result
         except (AttributeError, TypeError):
-            # If parent method doesn't exist, implement our own validation
+            # If parent method doesn't exist or fails, implement our own validation
             if y is None:
-                X_array = check_array(X, **check_params)
+                X_array = check_array(X, **safe_params)
                 if reset:
                     self.n_features_in_ = X_array.shape[1]
                 return X_array
             else:
-                X_array, y_array = check_X_y(X, y, **check_params)
+                X_array, y_array = check_X_y(X, y, **safe_params)
                 if reset:
                     self.n_features_in_ = X_array.shape[1]
                 return X_array, y_array
@@ -327,7 +337,6 @@ class HyperbolicDecisionTree(BaseEstimator):
             accept_sparse=False, 
             dtype=np.float64, 
             ensure_2d=True, 
-            force_all_finite=True, 
             multi_output=False
         )
         

@@ -118,7 +118,6 @@ class HyperbolicDecisionTreeClassifier(HyperbolicDecisionTree, ClassifierMixin):
             accept_sparse=False, 
             dtype=np.float64, 
             ensure_2d=True, 
-            force_all_finite=True, 
             reset=False
         )
         
