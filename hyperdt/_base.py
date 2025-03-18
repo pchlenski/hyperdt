@@ -125,64 +125,37 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Initialize the estimator with appropriate parameters
         self.estimator_ = estimator_class(**kwargs)
 
-    @property
-    def __sklearn_tags__(self):
-        """Return estimator tags.
+    # Class attribute for scikit-learn >= 1.7
+    # This should be a dictionary, not a property
+    __sklearn_tags__ = {
+        # Explicitly mark what we don't support
+        'allow_nan': False,  # NaN values are not supported in hyperbolic space
+        'handles_1d_data': False,  # 1D data doesn't make sense in hyperbolic space
+        'requires_positive_X': False,
+        'requires_positive_y': False,
+        'X_types': ['2darray'],  # Only support dense arrays
+        'poor_score': False,
+        'no_validation': True,  # We do our own validation for hyperboloid constraints
+        'pairwise': False,
+        'multioutput': False,
+        'requires_fit': True,
+        'requires_y': True,  # This estimator requires y for fitting
+        'multilabel': False,  # Added in sklearn 1.0+
+        'non_deterministic': False,  # Added in sklearn 1.3+
+        'array_api_support': False,  # Added in sklearn 1.4+
         
-        This property is used by scikit-learn >= 1.7.
-        """
-        # Import inside method to avoid circular imports
-        import sklearn
-        # Use importlib.metadata instead of pkg_resources
-        try:
-            from importlib.metadata import version as parse_version
-        except ImportError:
-            # Fallback for Python < 3.8
-            from pkg_resources import parse_version
-        
-        # Base tags for all scikit-learn versions
-        tags = {
-            # Explicitly mark what we don't support
-            'allow_nan': False,  # NaN values are not supported in hyperbolic space
-            'handles_1d_data': False,  # 1D data doesn't make sense in hyperbolic space
-            'requires_positive_X': False,
-            'requires_positive_y': False,
-            'X_types': ['2darray'],  # Only support dense arrays
-            'poor_score': False,
-            'no_validation': True,  # We do our own validation for hyperboloid constraints
-            'pairwise': False,
-            'multioutput': False,
-            'requires_fit': True,
-            'requires_y': True,  # This estimator requires y for fitting
-            
-            # Explicitly skip tests that don't apply to hyperbolic space
-            '_skip_test': False,
-            '_xfail_checks': {
-                'check_estimators_nan_inf': 'NaN/inf not supported in hyperbolic space',
-                'check_estimator_sparse_data': 'Sparse matrices not supported in hyperbolic space',
-                'check_dtype_object': 'Object dtypes not supported',
-                'check_methods_subset_invariance': 'Hyperbolic constraints violated with subsets',
-                'check_fit1d': '1D data not supported in hyperbolic space',
-                'check_fit_check_is_fitted': 'Custom fit/predict validation',
-                'check_sample_weights_invariance': 'Not all sample weights preserve hyperboloid',
-            }
+        # Explicitly skip tests that don't apply to hyperbolic space
+        '_skip_test': False,
+        '_xfail_checks': {
+            'check_estimators_nan_inf': 'NaN/inf not supported in hyperbolic space',
+            'check_estimator_sparse_data': 'Sparse matrices not supported in hyperbolic space',
+            'check_dtype_object': 'Object dtypes not supported',
+            'check_methods_subset_invariance': 'Hyperbolic constraints violated with subsets',
+            'check_fit1d': '1D data not supported in hyperbolic space',
+            'check_fit_check_is_fitted': 'Custom fit/predict validation',
+            'check_sample_weights_invariance': 'Not all sample weights preserve hyperboloid',
         }
-        
-        # Add version-specific tags
-        sklearn_version = sklearn.__version__
-        
-        # Add version-specific tags
-        if float(sklearn_version.split('.')[0]) >= 1:
-            tags['multilabel'] = False  # Added in 1.0+
-            
-        major, minor = map(int, sklearn_version.split('.')[:2])
-        if (major >= 1 and minor >= 3) or major > 1:
-            tags['non_deterministic'] = False  # Added in 1.3+
-            
-        if (major >= 1 and minor >= 4) or major > 1:
-            tags['array_api_support'] = False  # Added in 1.4+
-        
-        return tags
+    }
         
     # Keep the _get_tags method for backward compatibility with older sklearn versions
     def _get_tags(self):
@@ -248,11 +221,9 @@ class HyperbolicDecisionTree(BaseEstimator):
         out : ndarray, sparse matrix, or tuple of these
             The validated input. A tuple is returned if `y` is not None.
         """
-        # Get tags using the new property to avoid AttributeError with sklearn >= 1.7
-        tags = self.__sklearn_tags__
-        
+        # Access tags directly from class attribute
         # If we are predicting (y is None), override the requires_y tag check
-        if y is None and tags.get('requires_y', False):
+        if y is None and self.__sklearn_tags__.get('requires_y', False):
             # For prediction, just validate X without requiring y
             X_array = check_array(X, **check_params)
             if reset:
