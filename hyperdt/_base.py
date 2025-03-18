@@ -221,19 +221,21 @@ class HyperbolicDecisionTree(BaseEstimator):
         out : ndarray, sparse matrix, or tuple of these
             The validated input. A tuple is returned if `y` is not None.
         """
-        # Create safe parameters - remove problematic ones for compatibility
-        safe_params = check_params.copy()
-        # Remove parameters that might cause issues in different sklearn versions
-        if 'ensure_all_finite' in safe_params:
-            safe_params.pop('ensure_all_finite')
-        if 'force_all_finite' in safe_params:
-            safe_params.pop('force_all_finite')
+        # Create a minimal set of safe parameters for direct check_array/check_X_y calls
+        # That don't depend on scikit-learn version
+        minimal_params = {}
+        for param_name in ['accept_sparse', 'dtype', 'ensure_2d']:
+            if param_name in check_params:
+                minimal_params[param_name] = check_params[param_name]
         
-        # Access tags directly from class attribute
-        # If we are predicting (y is None), override the requires_y tag check
+        # Special case multi_output for check_X_y
+        if 'multi_output' in check_params and y is not None:
+            minimal_params['multi_output'] = check_params['multi_output']
+                
+        # If predicting (y is None), override the requires_y tag check
         if y is None and self.__sklearn_tags__.get('requires_y', False):
             # For prediction, just validate X without requiring y
-            X_array = check_array(X, **safe_params)
+            X_array = check_array(X, **minimal_params)
             if reset:
                 self.n_features_in_ = X_array.shape[1]
             return X_array
@@ -241,21 +243,20 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Use the parent method for validation if possible
         try:
             # Try to use parent's _validate_data 
-            # This will trigger a FutureWarning in sklearn 1.6+ but that's acceptable 
-            # during the transition period
+            # Original parameters can be passed to BaseEstimator._validate_data
             result = super()._validate_data(X, y, reset=reset, 
                                         validate_separately=validate_separately, 
-                                        **safe_params)
+                                        **check_params)
             return result
         except (AttributeError, TypeError):
-            # If parent method doesn't exist or fails, implement our own validation
+            # Fall back to direct validation with minimal parameters
             if y is None:
-                X_array = check_array(X, **safe_params)
+                X_array = check_array(X, **minimal_params)
                 if reset:
                     self.n_features_in_ = X_array.shape[1]
                 return X_array
             else:
-                X_array, y_array = check_X_y(X, y, **safe_params)
+                X_array, y_array = check_X_y(X, y, **minimal_params)
                 if reset:
                     self.n_features_in_ = X_array.shape[1]
                 return X_array, y_array
