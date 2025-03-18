@@ -6,12 +6,33 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
     """Einstein midpoint implementation using gyrovector operations"""
 
-    def __init__(self, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True, **kwargs):
+    def __init__(self, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=False, **kwargs):
         self.max_depth = max_depth
         self.curvature = abs(curvature)
         self.timelike_dim = timelike_dim
         self.skip_hyperboloid_check = skip_hyperboloid_check  # TODO: use this
         self.tree = DecisionTreeClassifier(max_depth=max_depth, **kwargs)
+
+    def _validate_hyperbolic(self, X) -> None:
+        """
+        Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
+        of all spacelike squares, to simplify indexing.
+        """
+        dims = np.delete(np.arange(X.shape[1]), self.timelike_dim)
+        # Ensure Minkowski norm
+        assert np.allclose(
+            np.sum(X[:, dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2, -1 / self.curvature, atol=1e-3
+        ), "Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}."
+
+        # Ensure timelike
+        assert np.all(
+            X[:, self.timelike_dim] > 1.0 / self.curvature
+        ), "Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1."
+
+        # Ensure hyperboloid
+        assert np.all(
+            X[:, self.timelike_dim] > np.linalg.norm(X[:, dims], axis=1)
+        ), "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
 
     def _einstein_midpoint(self, u, v):
         """Einstein midpoint for scalar features. Assumes u, v are the i-th coordinates of points in the Klein model"""
@@ -50,6 +71,9 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         self._adjust_thresholds(tree.children_right[node_id], X_klein, right_samples)
 
     def fit(self, X, y):
+        if not self.skip_hyperboloid_check:
+            self._validate_hyperbolic(X)
+
         # Convert to Klein coordinates (x_d/x_0)
         x0 = X[:, self.timelike_dim]
         X_klein = np.delete(X, self.timelike_dim, axis=1) / x0[:, None]
@@ -59,11 +83,17 @@ class HyperbolicDecisionTreeClassifier(BaseEstimator, ClassifierMixin):
         return self
 
     def predict(self, X):
+        if not self.skip_hyperboloid_check:
+            self._validate_hyperbolic(X)
+
         x0 = X[:, self.timelike_dim]
         X_klein = np.delete(X, self.timelike_dim, axis=1) / x0[:, None]
         return self.tree.predict(X_klein)
 
     def predict_proba(self, X):
+        if not self.skip_hyperboloid_check:
+            self._validate_hyperbolic(X)
+
         x0 = X[:, self.timelike_dim]
         X_klein = np.delete(X, self.timelike_dim, axis=1) / x0[:, None]
         return self.tree.predict_proba(X_klein)
