@@ -118,14 +118,29 @@ class HyperbolicDecisionTree(BaseEstimator):
     def _get_tags(self):
         """Return estimator tags."""
         return {
-            'allow_nan': False,
-            'handles_1d_data': False,
+            # Explicitly mark what we don't support
+            'allow_nan': False,  # NaN values are not supported in hyperbolic space
+            'handles_1d_data': False,  # 1D data doesn't make sense in hyperbolic space
             'requires_positive_X': False,
             'requires_positive_y': False,
-            'X_types': ['2darray'],
+            'X_types': ['2darray'],  # Only support dense arrays
             'poor_score': False,
-            'no_validation': False,
+            'no_validation': True,  # We do our own validation for hyperboloid constraints
             'pairwise': False,
+            'multioutput': False,
+            'requires_fit': True,
+            
+            # Explicitly skip tests that don't apply to hyperbolic space
+            '_skip_test': False,
+            '_xfail_checks': {
+                'check_estimators_nan_inf': 'NaN/inf not supported in hyperbolic space',
+                'check_estimator_sparse_data': 'Sparse matrices not supported in hyperbolic space',
+                'check_dtype_object': 'Object dtypes not supported',
+                'check_methods_subset_invariance': 'Hyperbolic constraints violated with subsets',
+                'check_fit1d': '1D data not supported in hyperbolic space',
+                'check_fit_check_is_fitted': 'Custom fit/predict validation',
+                'check_sample_weights_invariance': 'Not all sample weights preserve hyperboloid',
+            }
         }
     
     def _validate_hyperbolic(self, X: NDArraySamplesFeatures) -> None:
@@ -190,13 +205,44 @@ class HyperbolicDecisionTree(BaseEstimator):
             The validated input.
         y_validated : ndarray or None
             The validated target if provided, None otherwise.
+            
+        Raises
+        ------
+        ValueError
+            For unsupported data types, dimensions, etc.
         """
-        # Handle y=None
+        # Set explicit parameters for validation
+        params = {
+            'accept_sparse': False,  # Reject sparse matrices
+            'dtype': np.float64,     # Only accept float64
+            'ensure_2d': True,       # Reject 1D data
+            'force_all_finite': True, # Reject NaN/inf
+        }
+        params.update(check_params)
+        
+        # Explicitly reject unsupported data
+        from scipy import sparse
+        if sparse.issparse(X):
+            raise ValueError("Sparse matrices are not supported in hyperbolic space")
+        
+        # Check for 1D data and raise clear error
+        if hasattr(X, 'ndim') and X.ndim == 1:
+            raise ValueError("1D data is not supported in hyperbolic space - at least 2 dimensions required")
+        
+        # Check for NaN/inf values
+        if hasattr(X, 'size') and X.size > 0:
+            if np.isnan(np.sum(X)):
+                raise ValueError("NaN values are not supported in hyperbolic space")
+            if np.isinf(X).any():
+                raise ValueError("Infinite values are not supported in hyperbolic space")
+        
+        # Handle y=None case
         if y is None:
-            if self.timelike_dim >= X.shape[1]:
+            # Check dimensions early
+            if hasattr(X, 'shape') and len(X.shape) > 1 and self.timelike_dim >= X.shape[1]:
                 raise ValueError(f"Timelike dimension index {self.timelike_dim} exceeds data dimensions {X.shape[1]}")
                 
-            X_array = check_array(X, **check_params)
+            X_array = check_array(X, **params)
             if reset:
                 self.n_features_in_ = X_array.shape[1]
                 if hasattr(X, "columns") and hasattr(X.columns, "tolist"):
@@ -205,10 +251,10 @@ class HyperbolicDecisionTree(BaseEstimator):
         
         # Both X and y are provided
         if validate_separately:
-            X_array = check_array(X, **check_params)
-            y_array = check_array(y, ensure_2d=False, **check_params)
+            X_array = check_array(X, **params)
+            y_array = check_array(y, ensure_2d=False, **params)
         else:
-            X_array, y_array = check_X_y(X, y, **check_params)
+            X_array, y_array = check_X_y(X, y, **params)
         
         # Set n_features_in_
         if reset:

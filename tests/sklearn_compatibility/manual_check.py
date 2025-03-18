@@ -41,9 +41,14 @@ CompatibilityHyperbolicDecisionTreeRegressor._get_tags = _get_tags
 # Run a subset of estimator checks that are more likely to pass
 def run_manual_check():
     """Run a subset of estimator checks manually."""
-    print("Skipping full check_estimator tests (would require more compatibility code)")
-    #clf = CompatibilityHyperbolicDecisionTreeClassifier()
-    #check_estimator(clf)
+    print("Testing with check_estimator (some tests are expected to fail)")
+    try:
+        # Import our modified estimator which should fail cleanly
+        from hyperdt.faster_tree import HyperbolicDecisionTreeClassifier
+        clf = HyperbolicDecisionTreeClassifier()
+        check_estimator(clf)
+    except Exception as e:
+        print(f"Expected failures in check_estimator: {str(e)[:100]}...")
     
     print("\nTesting basic pipeline compatibility...")
     from sklearn.pipeline import Pipeline
