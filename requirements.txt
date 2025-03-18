@@ -1,0 +1,7 @@
+numpy>=1.20.0,<1.27.0
+scikit-learn>=1.0.0,<1.6.0
+scipy>=1.7.0
+matplotlib>=3.5.0
+geomstats>=2.5.0
+tqdm>=4.60.0
+joblib>=1.0.0

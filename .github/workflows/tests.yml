@@ -22,11 +22,11 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        # Install the package with all dependencies in development mode
-        # Add verbose output for debugging
-        pip install -e . -v
-        # Install test dependencies after package installation
-        pip install pytest pytest-cov mypy typing_extensions
+        # Install dependencies from requirements files
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+        # Install the package in development mode
+        pip install -e .
     - name: Check type annotations with mypy
       run: |
         mypy --ignore-missing-imports --no-warn-return-any hyperdt/
