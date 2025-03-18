@@ -2,3 +2,4 @@ pytest>=7.0.0
 pytest-cov>=4.0.0
 mypy>=0.950
 typing_extensions>=4.0.0
+types-setuptools

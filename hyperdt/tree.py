@@ -152,7 +152,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
         # Some attributes we need:
         self.ndim = X.shape[1]
-        self.dims = list(range(self.ndim))
+        self.dims = list(range(self.ndim))  # type: ignore
         self.classes_, y = np.unique(y, return_inverse=True)
 
         # Weight classes
@@ -161,7 +161,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
             self.weights /= np.sum(self.weights)
 
         # Validate data and fit tree:
-        self.tree = self._fit_node(X=X, y=y, depth=0)
+        self.tree = self._fit_node(X=X, y=y, depth=0)  # type: ignore
         return self
 
     def _left(self, x: np.ndarray, node: DecisionNode) -> bool:
@@ -250,7 +250,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         self.timelike_dim = timelike_dim
         self.hyperbolic = True
         self.dot_product = dot_product
-        self.curvature = abs(curvature)
+        self.curvature = float(abs(curvature))
         self.skip_hyperboloid_check = skip_hyperboloid_check
         self.angle_midpoint_method = angle_midpoint_method  # 'hyperbolic' or 'bisect'
 
@@ -259,7 +259,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         if self.dot_product == "sparse":
             return np.sin(theta) * X[:, dim] - np.cos(theta) * X[:, self.timelike_dim]
         elif self.dot_product == "dense":
-            v = np.zeros(self.ndim)
+            v = np.zeros(self.ndim)  # type: ignore
             v[self.timelike_dim], v[dim] = -np.cos(theta), np.sin(theta)
             return X @ v
         elif self.dot_product == "sparse_minkowski":
@@ -328,7 +328,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         # Some attributes we need:
         self.ndim = X.shape[1]
         self.classes_ = np.unique(y)
-        self.dims = list(range(self.ndim))
+        self.dims = list(range(self.ndim))  # type: ignore
 
         # Weight classes
         if self.weights == "balanced":
