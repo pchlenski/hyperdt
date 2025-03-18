@@ -7,23 +7,21 @@ import pytest
 import numpy as np
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
-from hyperdt.faster_tree import (
+from hyperdt import (
     HyperbolicDecisionTree,
     HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
+    XGBOOST_AVAILABLE,
 )
 
 # Import XGBoost types if available
-try:
-    from hyperdt.faster_tree import (
+if XGBOOST_AVAILABLE:
+    from hyperdt import (
         HyperbolicXGBoostClassifier,
         HyperbolicXGBoostRegressor,
     )
-    XGBOOST_AVAILABLE = True
-except ImportError:
-    XGBOOST_AVAILABLE = False
 
 # Create a fixture for the data
 @pytest.fixture

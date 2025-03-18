@@ -26,7 +26,7 @@ import sys
 import pytest
 
 # Import the faster implementation
-from hyperdt.faster_tree import HyperbolicDecisionTreeClassifier as FasterHDTC
+from hyperdt import HyperbolicDecisionTreeClassifier as FasterHDTC
 
 # Try to import the legacy implementation
 try:

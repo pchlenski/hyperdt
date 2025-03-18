@@ -5,6 +5,9 @@ hyperdt.egg-info/
 *.egg-info/
 build/
 dist/
+.coverage
+coverage.xml
+.pytest_cache/
 
 
 # Hyperbolic learning github repos I cloned

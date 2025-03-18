@@ -12,21 +12,18 @@ import os
 # Add the parent directory to the path to import hyperdt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from hyperdt.faster_tree import (
+from hyperdt import (
     HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
+    XGBOOST_AVAILABLE,
 )
 
 # Check if XGBoost is available
-try:
+if XGBOOST_AVAILABLE:
     import xgboost as xgb
-    from hyperdt.faster_tree import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
-
-    XGBOOST_AVAILABLE = True
-except (ImportError, AttributeError):
-    XGBOOST_AVAILABLE = False
+    from hyperdt import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
 
 
 # Generate synthetic hyperbolic data for testing
