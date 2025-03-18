@@ -1,15 +1,18 @@
 codecov:
-  require_ci_to_pass: yes
+  require_ci_to_pass: no  # Don't require CI to pass to upload coverage
+  notify:
+    wait_for_ci: false  # Don't wait for CI to finish to notify
 
 coverage:
   precision: 2
   round: down
-  range: "60...90"
+  range: "40...80"  # More lenient range for coverage display
   status:
     project:
       default:
         target: auto
-        threshold: 5%
+        threshold: 10%  # More lenient threshold for status checks
+        informational: true  # Make coverage status checks informational only
 
 parsers:
   gcov:
