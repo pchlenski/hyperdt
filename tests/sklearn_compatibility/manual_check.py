@@ -23,7 +23,12 @@ from test_check_estimator import (
 
 # Add _get_tags to compatibility classes to fix the _skip_test error
 def _get_tags(self):
-    return {
+    # Import inside method to avoid circular imports
+    import sklearn
+    from pkg_resources import parse_version
+    
+    # Base tags for all scikit-learn versions
+    tags = {
         'allow_nan': False,
         'handles_1d_data': False,
         'requires_positive_X': False,
@@ -32,11 +37,20 @@ def _get_tags(self):
         'poor_score': False,
         'no_validation': True,
         'multioutput': False,
-        'multilabel': False,
         '_skip_test': False,
-        'array_api_support': False,
-        'non_deterministic': False,
     }
+    
+    # Add version-specific tags
+    if parse_version(sklearn.__version__) >= parse_version('1.0.0'):
+        tags['multilabel'] = False  # Added in 1.0+
+        
+    if parse_version(sklearn.__version__) >= parse_version('1.3.0'):
+        tags['non_deterministic'] = False  # Added in 1.3+
+        
+    if parse_version(sklearn.__version__) >= parse_version('1.4.0'):
+        tags['array_api_support'] = False  # Added in 1.4+
+    
+    return tags
 
 CompatibilityHyperbolicDecisionTreeClassifier._get_tags = _get_tags
 CompatibilityHyperbolicDecisionTreeRegressor._get_tags = _get_tags
