@@ -17,6 +17,7 @@ coverage:
 ignore:
   - "hyperdt/legacy/**"    # Exclude all legacy code from coverage including subdirectories
   - "hyperdt/legacy/*.py"  # Explicitly exclude Python files in the legacy directory itself
+  - "tests/**"             # Exclude test files from coverage
 
 parsers:
   gcov:

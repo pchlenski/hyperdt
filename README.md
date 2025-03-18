@@ -7,8 +7,8 @@
 [![Tests](https://github.com/pchlenski/hyperdt/actions/workflows/tests.yml/badge.svg)](https://github.com/pchlenski/hyperdt/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/pchlenski/hyperdt/branch/main/graph/badge.svg)](https://codecov.io/gh/pchlenski/hyperdt)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Mypy: Checked](https://img.shields.io/badge/mypy-checked-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/typing/README.md)
-[![sklearn: Compatible](https://img.shields.io/badge/sklearn-compatible-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/sklearn_compatibility/README.md)
+[![Mypy: Checked](https://img.shields.io/badge/mypy-checked-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/test_typing.py)
+[![sklearn: Compatible](https://img.shields.io/badge/sklearn-compatible-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/test_sklearn_compatibility.py)
 [![ICLR 2024](https://img.shields.io/badge/ICLR-2024-blueviolet.svg)](https://openreview.net/forum?id=TTonmgTT9X)
 
 This repository contains code for the paper Fast Hyperboloid Decision Tree Algorithms (ICLR 2024), which you can find
@@ -70,6 +70,14 @@ The hyperDT package is structured as follows:
 - `hyperdt/_xgboost.py`: XGBoost integration (requires `pip install hyperdt[xgboost]`)
 - `hyperdt/legacy/`: Original implementation (requires `pip install hyperdt[legacy]`)
 - `hyperdt/toy_data.py`: Utilities for generating synthetic hyperbolic datasets
+- `tests/`: Test files for verifying functionality
+
+The tests are organized into separate files by functionality:
+- `tests/test_typing.py`: Type annotation verification tests
+- `tests/test_model_types.py`: Tests for classifier and regressor functionality
+- `tests/test_toy_data.py`: Tests for data generation utilities
+- `tests/test_equivalence.py`: Tests comparing the new implementation to the legacy code
+- `tests/test_sklearn_compatibility.py`: Tests for scikit-learn API compatibility
 
 The package has a modular design with optional dependencies:
 - Core functionality only requires numpy, scikit-learn, scipy, and matplotlib

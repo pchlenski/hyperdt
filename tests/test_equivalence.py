@@ -21,7 +21,6 @@ from sklearn.tree._tree import TREE_LEAF
 import time
 from pathlib import Path
 import os
-import sys
 
 import pytest
 
@@ -40,7 +39,7 @@ except ImportError:
         return None, None
 
 # Create directory for images
-IMAGES_DIR = Path("/home/phil/hyperdt/tests/equivalence/images")
+IMAGES_DIR = Path("/home/phil/hyperdt/tests/images")
 IMAGES_DIR.mkdir(exist_ok=True)
 
 # All results will be saved to the images directory

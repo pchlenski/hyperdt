@@ -1,1 +1,0 @@
-# equivalence test module

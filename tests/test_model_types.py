@@ -6,11 +6,6 @@ This test suite verifies that each model type can properly fit and predict data.
 import numpy as np
 from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.model_selection import train_test_split
-import sys
-import os
-
-# Add the parent directory to the path to import hyperdt
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 from hyperdt import (
     HyperbolicDecisionTreeClassifier,
