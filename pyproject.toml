@@ -36,6 +36,26 @@ dev = [
     "black>=22.3.0",
     "isort>=5.10.1",
     "mypy>=0.950",
+    "typing_extensions>=4.0.0",
+    "types-setuptools",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "mypy>=0.950",
+    "typing_extensions>=4.0.0",
+    "types-setuptools",
+]
+xgboost = [
+    "xgboost>=1.5.0",
+]
+legacy = [
+    # Dependencies specifically for the legacy tree.py implementation
+    "geomstats>=2.5.0",
+]
+all = [
+    "xgboost>=1.5.0",
+    "geomstats>=2.5.0",
 ]
 
 [project.urls]

@@ -5,7 +5,7 @@ This module implements decision trees that operate natively in hyperbolic space.
 
 from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Type, cast
 import numpy as np
-from numpy.typing import ArrayLike, NDArray
+from numpy.typing import ArrayLike
 from typing_extensions import Protocol, TypedDict, Annotated, runtime_checkable
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
@@ -20,14 +20,11 @@ except ImportError:
     XGBOOST_AVAILABLE = False
 
 # Define custom type aliases for array shapes
-from typing import TypeVar, Union, Any, Type
+from typing import TypeVar, Union, Any, Type, TYPE_CHECKING
 import numpy.typing as npt
 
 # Type aliases for type checking
 T = TypeVar('T', bound=np.generic)
-NDArraySamples = npt.NDArray[np.float64]  # 1D array of samples
-NDArraySamplesFeatures = npt.NDArray[np.float64]  # 2D array of samples x features 
-NDArraySamplesClasses = npt.NDArray[np.float64]  # 2D array of samples x classes
 
 
 class HyperbolicDecisionTree(BaseEstimator):
@@ -184,14 +181,14 @@ class HyperbolicDecisionTree(BaseEstimator):
         
         return tags
     
-    def _validate_hyperbolic(self, X: NDArraySamplesFeatures) -> None:
+    def _validate_hyperbolic(self, X: np.ndarray) -> None:
         """
         Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
         of all spacelike squares, to simplify indexing.
         
         Parameters
         ----------
-        X : NDArray of shape (n_samples, n_dimensions)
+        X : np.ndarray of shape (n_samples, n_dimensions)
             The input data points in hyperboloid coordinates.
             
         Raises
@@ -278,7 +275,7 @@ class HyperbolicDecisionTree(BaseEstimator):
         ----------
         estimator : object
             The fitted decision tree.
-        X_klein : NDArray of shape (n_samples, n_features)
+        X_klein : np.ndarray of shape (n_samples, n_features)
             The training data in Klein coordinates.
         indices : array-like of shape (n_samples,)
             The indices of the training samples.
@@ -375,7 +372,7 @@ class HyperbolicDecisionTree(BaseEstimator):
     def predict(
         self, 
         X: ArrayLike
-    ) -> NDArraySamples:
+    ) -> np.ndarray:
         """
         Predict class or regression value for X.
         
@@ -490,7 +487,7 @@ class HyperbolicDecisionTreeClassifier(HyperbolicDecisionTree, ClassifierMixin):
         )
         
     @property
-    def feature_importances_(self) -> NDArray:
+    def feature_importances_(self) -> np.ndarray:
         """Feature importances from underlying estimator."""
         check_is_fitted(self, ["estimator_"])
         return self.estimator_.feature_importances_
@@ -498,7 +495,7 @@ class HyperbolicDecisionTreeClassifier(HyperbolicDecisionTree, ClassifierMixin):
     def predict_proba(
         self, 
         X: ArrayLike
-    ) -> NDArraySamplesClasses:
+    ) -> np.ndarray:
         """
         Predict class probabilities for X.
         
@@ -635,7 +632,7 @@ class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTree, RegressorMixin):
         )
         
     @property
-    def feature_importances_(self) -> NDArray:
+    def feature_importances_(self) -> np.ndarray:
         """Feature importances from underlying estimator."""
         check_is_fitted(self, ["estimator_"])
         return self.estimator_.feature_importances_
@@ -714,6 +711,9 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
         kwargs["n_estimators"] = n_estimators
         
         # Don't pass splitter parameter to RandomForestClassifier as it doesn't accept it
+        # Construct kwargs dict without passing splitter for RandomForest models
+        # Note: We intentionally don't pass splitter here since RandomForest doesn't support it
+        #       It will be filtered in _init_estimator anyway
         super().__init__(
             backend="sklearn_rf",
             max_depth=max_depth,
@@ -722,7 +722,6 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
             criterion=criterion,
             skip_hyperboloid_check=skip_hyperboloid_check,
             random_state=random_state,
-            splitter=None,  # This will be ignored/removed in _init_estimator
             **kwargs,
         )
 
@@ -776,6 +775,9 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
         kwargs["n_estimators"] = n_estimators
         
         # Don't pass splitter parameter to RandomForestRegressor as it doesn't accept it
+        # Construct kwargs dict without passing splitter for RandomForest models
+        # Note: We intentionally don't pass splitter here since RandomForest doesn't support it
+        #       It will be filtered in _init_estimator anyway
         super().__init__(
             backend="sklearn_rf",
             max_depth=max_depth,
@@ -784,7 +786,6 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
             criterion=criterion,
             skip_hyperboloid_check=skip_hyperboloid_check,
             random_state=random_state,
-            splitter=None,  # This will be ignored/removed in _init_estimator
             **kwargs,
         )
 

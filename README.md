@@ -25,10 +25,16 @@ cd hyperdt
 pip install -e .
 ```
 
-If you are installing with e.g. a conda environment or virtualenv, you can find exact dependencies in `requirements.txt`.
-These are installable in the usual way:
+All dependencies are managed through pyproject.toml. For development, you can install the package with all development dependencies:
+
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"
+```
+
+For testing, you can install the test dependencies:
+
+```bash
+pip install -e ".[test]"
 ```
 
 ### Pip install
@@ -38,8 +44,36 @@ Additionally, hyperDT is available on PyPI. It can be pip installed as follows:
 pip install hyperdt
 ```
 
+HyperDT supports optional dependencies:
+
+```bash
+# Install with XGBoost support
+pip install hyperdt[xgboost]
+
+# Install with legacy implementation support (requires geomstats)
+pip install hyperdt[legacy]
+
+# Install all optional dependencies
+pip install hyperdt[all]
+```
+
 ## Tutorial
 A basic tutorial demonstrating key HyperDT functionality is available in `notebooks/tutorial.ipynb`.
+
+## Package Structure
+
+The hyperDT package is structured as follows:
+
+- `hyperdt/faster_tree.py`: The main implementation with scikit-learn compatible interfaces and optimized performance
+- `hyperdt/legacy/`: Module containing the original implementation that uses geomstats (requires `pip install hyperdt[legacy]`)
+- `hyperdt/conversions.py`: Utilities for converting between different hyperbolic coordinate systems
+- `hyperdt/visualization.py`: Tools for visualizing hyperbolic decision trees
+- `hyperdt/toy_data.py`: Utilities for generating synthetic hyperbolic datasets
+
+The package has a modular design with optional dependencies:
+- Core functionality only requires numpy, scikit-learn, scipy, and matplotlib
+- XGBoost backend requires the xgboost package (`pip install hyperdt[xgboost]`)
+- Legacy implementation requires geomstats (`pip install hyperdt[legacy]`)
 
 ## Reproducibility and data availability
 All figures and tables in the paper were generated using a combination of Python scripts and Jupyter notebooks. The notebooks used in development were filtered down to only those that remained relevant to the final paper and moved to the `notebooks/archive` directory. The `notebooks` directory contains a tutorial and symbolic links to notebooks of particular relevance to a figure, table, or section of a paper, named according to the section they reproduce.
