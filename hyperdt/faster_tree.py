@@ -1,28 +1,68 @@
+"""
+Hyperbolic Decision Trees with configurable backends for classification and regression.
+This module implements decision trees that operate natively in hyperbolic space.
+"""
+
+from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Type, cast
 import numpy as np
+from numpy.typing import ArrayLike, NDArray
+from typing_extensions import Protocol, TypedDict, Annotated, runtime_checkable
 from sklearn.base import BaseEstimator, ClassifierMixin, RegressorMixin
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.tree._tree import Tree as SklearnTree
+from sklearn.utils.validation import check_is_fitted, check_array, check_X_y
 
 try:
     import xgboost as xgb
-
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
 
+# Define custom type aliases for array shapes
+NDArraySamples = NDArray  # 1D array of samples
+NDArraySamplesFeatures = NDArray  # 2D array of samples x features
+NDArraySamplesClasses = NDArray  # 2D array of samples x classes
+
 
 class HyperbolicDecisionTree(BaseEstimator):
-    """Base class for hyperbolic trees with configurable backend"""
+    """Base class for hyperbolic trees with configurable backend
+    
+    Parameters
+    ----------
+    backend : str, default="sklearn_dt"
+        The backend to use for the tree estimator.
+        Available backends: "sklearn_dt", "sklearn_rf", "xgboost" (if installed)
+    task : str, default="classification"
+        The task type. Available tasks: "classification", "regression"
+    max_depth : int, default=3
+        The maximum depth of the tree. Must be >= 1.
+    curvature : float, default=1.0
+        The curvature of the hyperbolic space. Must be positive.
+    timelike_dim : int, default=0
+        The index of the timelike dimension in the input data.
+        The remaining dimensions are treated as spacelike.
+    skip_hyperboloid_check : bool, default=False
+        Whether to skip the validation that points lie on a hyperboloid.
+        Set to True for speed if data is already properly formatted.
+    **kwargs : 
+        Additional parameters passed to the underlying backend estimator.
+    
+    Attributes
+    ----------
+    estimator_ : object
+        The underlying fitted estimator instance.
+    """
 
     def __init__(
         self,
-        backend="sklearn_dt",
-        task="classification",
-        max_depth=3,
-        curvature=1.0,
-        timelike_dim=0,
-        skip_hyperboloid_check=False,
-        **kwargs,
+        backend: str = "sklearn_dt",
+        task: str = "classification",
+        max_depth: int = 3,
+        curvature: float = 1.0,
+        timelike_dim: int = 0,
+        skip_hyperboloid_check: bool = False,
+        **kwargs: Any,
     ):
         self.backend = backend
         self.task = task
@@ -35,9 +75,9 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Initialize appropriate backend estimator
         self._init_estimator()
 
-    def _init_estimator(self):
+    def _init_estimator(self) -> None:
         """Initialize the appropriate backend estimator"""
-        backend_map = {
+        backend_map: Dict[str, Dict[str, Type[Any]]] = {
             "classification": {
                 "sklearn_dt": DecisionTreeClassifier,
                 "sklearn_rf": RandomForestClassifier,
@@ -69,16 +109,26 @@ class HyperbolicDecisionTree(BaseEstimator):
 
         self.estimator_ = estimator_class(**kwargs)
 
-    def _validate_hyperbolic(self, X):
+    def _validate_hyperbolic(self, X: NDArraySamplesFeatures) -> None:
         """
         Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
         of all spacelike squares, to simplify indexing.
+        
+        Parameters
+        ----------
+        X : NDArray of shape (n_samples, n_dimensions)
+            The input data points in hyperboloid coordinates.
+            
+        Raises
+        ------
+        AssertionError
+            If the points do not lie on a hyperboloid with the specified curvature.
         """
         dims = np.delete(np.arange(X.shape[1]), self.timelike_dim)
         # Ensure Minkowski norm
         assert np.allclose(
             np.sum(X[:, dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2, -1 / self.curvature, atol=1e-3
-        ), "Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}."
+        ), f"Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}."
 
         # Ensure timelike
         assert np.all(
@@ -90,8 +140,22 @@ class HyperbolicDecisionTree(BaseEstimator):
             X[:, self.timelike_dim] > np.linalg.norm(X[:, dims], axis=1)
         ), "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
 
-    def _einstein_midpoint(self, u, v):
-        """Einstein midpoint for scalar features. Assumes u, v are the i-th coordinates of points in the Klein model"""
+    def _einstein_midpoint(self, u: float, v: float) -> float:
+        """
+        Einstein midpoint for scalar features. Assumes u, v are the i-th coordinates of points in the Klein model
+        
+        Parameters
+        ----------
+        u : float
+            First coordinate
+        v : float
+            Second coordinate
+            
+        Returns
+        -------
+        float
+            Einstein midpoint coordinate
+        """
         gamma_u = 1 / np.sqrt(1 - u**2 / self.curvature)
         gamma_v = 1 / np.sqrt(1 - v**2 / self.curvature)
 
@@ -103,10 +167,24 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Rescale back to original coordinates
         return midpoint
 
-    def _adjust_thresholds(self, estimator, X_klein, samples):
+    def _adjust_thresholds(
+        self, 
+        estimator: Any, 
+        X_klein: NDArraySamplesFeatures, 
+        samples: NDArraySamples
+    ) -> None:
         """
         Adjust thresholds using Einstein midpoint method.
         Works for both individual trees and ensembles of trees.
+        
+        Parameters
+        ----------
+        estimator : object
+            The estimator object with decision thresholds
+        X_klein : NDArray of shape (n_samples, n_dimensions-1)
+            The input data in Klein coordinates
+        samples : NDArray of shape (n_samples,)
+            The indices of samples to consider
         """
         # Handle different types of estimators
         if hasattr(estimator, "estimators_"):  # RandomForest and similar
@@ -116,8 +194,27 @@ class HyperbolicDecisionTree(BaseEstimator):
             self._adjust_tree_thresholds(estimator.tree_, 0, X_klein, samples)
         # Add handlers for other tree types as needed (XGBoost, etc.)
 
-    def _adjust_tree_thresholds(self, tree, node_id, X_klein, samples):
-        """Adjust thresholds for a single tree's node and its children"""
+    def _adjust_tree_thresholds(
+        self, 
+        tree: SklearnTree, 
+        node_id: int, 
+        X_klein: NDArraySamplesFeatures, 
+        samples: NDArraySamples
+    ) -> None:
+        """
+        Adjust thresholds for a single tree's node and its children
+        
+        Parameters
+        ----------
+        tree : sklearn.tree._tree.Tree
+            The decision tree to adjust
+        node_id : int
+            The current node ID
+        X_klein : NDArray of shape (n_samples, n_dimensions-1)
+            The input data in Klein coordinates
+        samples : NDArray of shape (n_samples,)
+            The indices of samples to consider
+        """
         if tree.children_left[node_id] == -1:  # Leaf node
             return
 
@@ -139,48 +236,132 @@ class HyperbolicDecisionTree(BaseEstimator):
         self._adjust_tree_thresholds(tree, tree.children_left[node_id], X_klein, left_samples)
         self._adjust_tree_thresholds(tree, tree.children_right[node_id], X_klein, right_samples)
 
-    def fit(self, X, y):
+    def fit(
+        self, 
+        X: ArrayLike, 
+        y: ArrayLike
+    ) -> "HyperbolicDecisionTree":
+        """
+        Fit the hyperbolic decision tree model.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The training input samples in hyperboloid coordinates
+        y : array-like of shape (n_samples,)
+            Target values.
+            
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
+        # Validate input
+        X_array = check_array(X, dtype=np.float64)
+        X_array, y_array = check_X_y(X_array, y, multi_output=False)
+        
         if not self.skip_hyperboloid_check:
-            self._validate_hyperbolic(X)
+            self._validate_hyperbolic(X_array)
 
         # Convert to Klein coordinates (x_d/x_0)
-        x0 = X[:, self.timelike_dim]
-        X_klein = np.delete(X, self.timelike_dim, axis=1) / x0[:, None]
+        x0 = X_array[:, self.timelike_dim]
+        X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
 
         # Fit backend estimator
-        self.estimator_.fit(X_klein, y)
+        self.estimator_.fit(X_klein, y_array)
 
         # Adjust thresholds for decision trees and tree ensembles
         if self.backend in ["sklearn_dt", "sklearn_rf"]:
-            self._adjust_thresholds(self.estimator_, X_klein, np.arange(len(X)))
+            self._adjust_thresholds(self.estimator_, X_klein, np.arange(len(X_array)))
 
         return self
 
-    def predict(self, X):
+    def predict(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamples:
+        """
+        Predict class or regression value for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y : ndarray of shape (n_samples,)
+            The predicted classes or values.
+        """
+        # Check if fit has been called
+        check_is_fitted(self, attributes=["estimator_"])
+        
+        # Validate input
+        X_array = check_array(X, dtype=np.float64)
+        
         if not self.skip_hyperboloid_check:
-            self._validate_hyperbolic(X)
+            self._validate_hyperbolic(X_array)
 
         # Convert to Klein coordinates
-        x0 = X[:, self.timelike_dim]
-        X_klein = np.delete(X, self.timelike_dim, axis=1) / x0[:, None]
+        x0 = X_array[:, self.timelike_dim]
+        X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
 
         return self.estimator_.predict(X_klein)
 
-    def predict_proba(self, X):
-        """Probability predictions for classifier models"""
+    def predict_proba(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamplesClasses:
+        """
+        Probability predictions for classifier models
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y_proba : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples.
+            
+        Raises
+        ------
+        AttributeError
+            If the task is not classification.
+        """
         if self.task != "classification":
             raise AttributeError("predict_proba is not available for regression tasks")
 
+        # Check if fit has been called
+        check_is_fitted(self, attributes=["estimator_"])
+        
+        # Validate input
+        X_array = check_array(X, dtype=np.float64)
+        
         if not self.skip_hyperboloid_check:
-            self._validate_hyperbolic(X)
+            self._validate_hyperbolic(X_array)
 
-        x0 = X[:, self.timelike_dim]
-        X_klein = np.delete(X, self.timelike_dim, axis=1) / x0[:, None]
+        x0 = X_array[:, self.timelike_dim]
+        X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
 
         return self.estimator_.predict_proba(X_klein)
 
-    def get_params(self, deep=True):
-        """Get parameters for this estimator"""
+    def get_params(self, deep: bool = True) -> Dict[str, Any]:
+        """
+        Get parameters for this estimator
+        
+        Parameters
+        ----------
+        deep : bool, default=True
+            If True, will return the parameters for this estimator and
+            contained subobjects that are estimators.
+            
+        Returns
+        -------
+        params : Dict
+            Parameter names mapped to their values.
+        """
         # Get parameters from parent
         params = super().get_params(deep=deep)
 
@@ -231,7 +412,14 @@ class HyperbolicDecisionTreeClassifier(HyperbolicDecisionTree, ClassifierMixin):
         Additional parameters to pass to the underlying DecisionTreeClassifier.
     """
 
-    def __init__(self, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=False, **kwargs):
+    def __init__(
+        self, 
+        max_depth: int = 3, 
+        curvature: float = 1.0, 
+        timelike_dim: int = 0, 
+        skip_hyperboloid_check: bool = False, 
+        **kwargs: Any
+    ):
         super().__init__(
             backend="sklearn_dt",
             task="classification",
@@ -241,6 +429,66 @@ class HyperbolicDecisionTreeClassifier(HyperbolicDecisionTree, ClassifierMixin):
             skip_hyperboloid_check=skip_hyperboloid_check,
             **kwargs,
         )
+
+    def fit(
+        self, 
+        X: ArrayLike, 
+        y: ArrayLike
+    ) -> "HyperbolicDecisionTreeClassifier":
+        """
+        Fit the hyperbolic decision tree classifier.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The training input samples in hyperboloid coordinates
+        y : array-like of shape (n_samples,)
+            The target values (class labels)
+            
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
+        return super().fit(X, y)
+
+    def predict(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamples:
+        """
+        Predict class for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y : ndarray of shape (n_samples,)
+            The predicted classes.
+        """
+        return super().predict(X)
+
+    def predict_proba(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamplesClasses:
+        """
+        Predict class probabilities for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y_proba : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples.
+        """
+        return super().predict_proba(X)
 
 
 class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTree, RegressorMixin):
@@ -272,7 +520,14 @@ class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTree, RegressorMixin):
         Additional parameters to pass to the underlying DecisionTreeRegressor.
     """
 
-    def __init__(self, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=False, **kwargs):
+    def __init__(
+        self, 
+        max_depth: int = 3, 
+        curvature: float = 1.0, 
+        timelike_dim: int = 0, 
+        skip_hyperboloid_check: bool = False, 
+        **kwargs: Any
+    ):
         super().__init__(
             backend="sklearn_dt",
             task="regression",
@@ -282,6 +537,47 @@ class HyperbolicDecisionTreeRegressor(HyperbolicDecisionTree, RegressorMixin):
             skip_hyperboloid_check=skip_hyperboloid_check,
             **kwargs,
         )
+
+    def fit(
+        self, 
+        X: ArrayLike, 
+        y: ArrayLike
+    ) -> "HyperbolicDecisionTreeRegressor":
+        """
+        Fit the hyperbolic decision tree regressor.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The training input samples in hyperboloid coordinates
+        y : array-like of shape (n_samples,)
+            The target values (real numbers)
+            
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
+        return super().fit(X, y)
+
+    def predict(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamples:
+        """
+        Predict regression value for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y : ndarray of shape (n_samples,)
+            The predicted values.
+        """
+        return super().predict(X)
 
 
 class HyperbolicRandomForestClassifier(HyperbolicDecisionTree, ClassifierMixin):
@@ -317,7 +613,13 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTree, ClassifierMixin):
     """
 
     def __init__(
-        self, n_estimators=100, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=False, **kwargs
+        self, 
+        n_estimators: int = 100, 
+        max_depth: int = 3, 
+        curvature: float = 1.0, 
+        timelike_dim: int = 0, 
+        skip_hyperboloid_check: bool = False, 
+        **kwargs: Any
     ):
         kwargs["n_estimators"] = n_estimators
         super().__init__(
@@ -329,6 +631,66 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTree, ClassifierMixin):
             skip_hyperboloid_check=skip_hyperboloid_check,
             **kwargs,
         )
+
+    def fit(
+        self, 
+        X: ArrayLike, 
+        y: ArrayLike
+    ) -> "HyperbolicRandomForestClassifier":
+        """
+        Fit the hyperbolic random forest classifier.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The training input samples in hyperboloid coordinates
+        y : array-like of shape (n_samples,)
+            The target values (class labels)
+            
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
+        return super().fit(X, y)
+
+    def predict(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamples:
+        """
+        Predict class for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y : ndarray of shape (n_samples,)
+            The predicted classes.
+        """
+        return super().predict(X)
+
+    def predict_proba(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamplesClasses:
+        """
+        Predict class probabilities for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y_proba : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples.
+        """
+        return super().predict_proba(X)
 
 
 class HyperbolicRandomForestRegressor(HyperbolicDecisionTree, RegressorMixin):
@@ -364,7 +726,13 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTree, RegressorMixin):
     """
 
     def __init__(
-        self, n_estimators=100, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=False, **kwargs
+        self, 
+        n_estimators: int = 100, 
+        max_depth: int = 3, 
+        curvature: float = 1.0, 
+        timelike_dim: int = 0, 
+        skip_hyperboloid_check: bool = False, 
+        **kwargs: Any
     ):
         kwargs["n_estimators"] = n_estimators
         super().__init__(
@@ -376,6 +744,47 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTree, RegressorMixin):
             skip_hyperboloid_check=skip_hyperboloid_check,
             **kwargs,
         )
+
+    def fit(
+        self, 
+        X: ArrayLike, 
+        y: ArrayLike
+    ) -> "HyperbolicRandomForestRegressor":
+        """
+        Fit the hyperbolic random forest regressor.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The training input samples in hyperboloid coordinates
+        y : array-like of shape (n_samples,)
+            The target values (real numbers)
+            
+        Returns
+        -------
+        self : object
+            Fitted estimator.
+        """
+        return super().fit(X, y)
+
+    def predict(
+        self, 
+        X: ArrayLike
+    ) -> NDArraySamples:
+        """
+        Predict regression value for X.
+        
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_dimensions)
+            The input samples in hyperboloid coordinates.
+            
+        Returns
+        -------
+        y : ndarray of shape (n_samples,)
+            The predicted values.
+        """
+        return super().predict(X)
 
 
 # Only define XGBoost classes if the library is available
@@ -417,13 +826,13 @@ if XGBOOST_AVAILABLE:
 
         def __init__(
             self,
-            n_estimators=100,
-            max_depth=3,
-            learning_rate=0.1,
-            curvature=1.0,
-            timelike_dim=0,
-            skip_hyperboloid_check=False,
-            **kwargs,
+            n_estimators: int = 100,
+            max_depth: int = 3,
+            learning_rate: float = 0.1,
+            curvature: float = 1.0,
+            timelike_dim: int = 0,
+            skip_hyperboloid_check: bool = False,
+            **kwargs: Any,
         ):
             kwargs.update({"n_estimators": n_estimators, "learning_rate": learning_rate})
             super().__init__(
@@ -435,6 +844,66 @@ if XGBOOST_AVAILABLE:
                 skip_hyperboloid_check=skip_hyperboloid_check,
                 **kwargs,
             )
+
+        def fit(
+            self, 
+            X: ArrayLike, 
+            y: ArrayLike
+        ) -> "HyperbolicXGBoostClassifier":
+            """
+            Fit the hyperbolic XGBoost classifier.
+            
+            Parameters
+            ----------
+            X : array-like of shape (n_samples, n_dimensions)
+                The training input samples in hyperboloid coordinates
+            y : array-like of shape (n_samples,)
+                The target values (class labels)
+                
+            Returns
+            -------
+            self : object
+                Fitted estimator.
+            """
+            return super().fit(X, y)
+
+        def predict(
+            self, 
+            X: ArrayLike
+        ) -> NDArraySamples:
+            """
+            Predict class for X.
+            
+            Parameters
+            ----------
+            X : array-like of shape (n_samples, n_dimensions)
+                The input samples in hyperboloid coordinates.
+                
+            Returns
+            -------
+            y : ndarray of shape (n_samples,)
+                The predicted classes.
+            """
+            return super().predict(X)
+
+        def predict_proba(
+            self, 
+            X: ArrayLike
+        ) -> NDArraySamplesClasses:
+            """
+            Predict class probabilities for X.
+            
+            Parameters
+            ----------
+            X : array-like of shape (n_samples, n_dimensions)
+                The input samples in hyperboloid coordinates.
+                
+            Returns
+            -------
+            y_proba : ndarray of shape (n_samples, n_classes)
+                The class probabilities of the input samples.
+            """
+            return super().predict_proba(X)
 
     class HyperbolicXGBoostRegressor(HyperbolicDecisionTree, RegressorMixin):
         """
@@ -472,13 +941,13 @@ if XGBOOST_AVAILABLE:
 
         def __init__(
             self,
-            n_estimators=100,
-            max_depth=3,
-            learning_rate=0.1,
-            curvature=1.0,
-            timelike_dim=0,
-            skip_hyperboloid_check=False,
-            **kwargs,
+            n_estimators: int = 100,
+            max_depth: int = 3,
+            learning_rate: float = 0.1,
+            curvature: float = 1.0,
+            timelike_dim: int = 0,
+            skip_hyperboloid_check: bool = False,
+            **kwargs: Any,
         ):
             kwargs.update({"n_estimators": n_estimators, "learning_rate": learning_rate})
             super().__init__(
@@ -490,3 +959,44 @@ if XGBOOST_AVAILABLE:
                 skip_hyperboloid_check=skip_hyperboloid_check,
                 **kwargs,
             )
+
+        def fit(
+            self, 
+            X: ArrayLike, 
+            y: ArrayLike
+        ) -> "HyperbolicXGBoostRegressor":
+            """
+            Fit the hyperbolic XGBoost regressor.
+            
+            Parameters
+            ----------
+            X : array-like of shape (n_samples, n_dimensions)
+                The training input samples in hyperboloid coordinates
+            y : array-like of shape (n_samples,)
+                The target values (real numbers)
+                
+            Returns
+            -------
+            self : object
+                Fitted estimator.
+            """
+            return super().fit(X, y)
+
+        def predict(
+            self, 
+            X: ArrayLike
+        ) -> NDArraySamples:
+            """
+            Predict regression value for X.
+            
+            Parameters
+            ----------
+            X : array-like of shape (n_samples, n_dimensions)
+                The input samples in hyperboloid coordinates.
+                
+            Returns
+            -------
+            y : ndarray of shape (n_samples,)
+                The predicted values.
+            """
+            return super().predict(X)
