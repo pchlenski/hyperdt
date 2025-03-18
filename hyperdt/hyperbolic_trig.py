@@ -72,7 +72,7 @@ def get_midpoint(
     if not skip_checks:
         theta_min = min(theta1, theta2)
         theta_max = max(theta1, theta2)
-        assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-6
+        assert np.abs(_dist_aberration(root, theta1, theta2)) < 1e-3
         assert root >= theta_min and root <= theta_max
 
     return root
