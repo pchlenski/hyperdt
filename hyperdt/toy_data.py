@@ -3,14 +3,14 @@
 from typing import Tuple, Literal, Optional
 
 import numpy as np
-from geomstats.geometry.hyperbolic import Hyperbolic
+from geomstats.geometry.hyperboloid import Hyperboloid
 
 # Need for bad_points:
 import geomstats.backend as gs
 import geomstats.algebra_utils as utils
 
 
-def bad_points(points: np.ndarray, base_points: np.ndarray, manifold: Hyperbolic) -> np.ndarray:
+def bad_points(points: np.ndarray, base_points: np.ndarray, manifold: Hyperboloid) -> np.ndarray:
     """Avoid the 'Minkowski norm of 0' error by using this"""
     sq_norm_tangent_vec = manifold.embedding_space.metric.squared_norm(points)
     sq_norm_tangent_vec = gs.clip(sq_norm_tangent_vec, 0, np.inf)
@@ -59,7 +59,7 @@ def wrapped_normal_mixture(
         np.random.seed(seed)
 
     # Make manifold
-    hyp = Hyperbolic(dim=num_dims, coords_type="extrinsic")
+    hyp = Hyperboloid(dim=num_dims)
     origin = np.array([1.0] + [0.0] * num_dims)
 
     # Generate random means; parallel transport from origin
