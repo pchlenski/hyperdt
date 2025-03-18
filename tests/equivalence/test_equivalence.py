@@ -416,8 +416,8 @@ def find_information_gain_ties(seed=44):
             chosen_orig_feature = orig_tree.tree.feature
             chosen_orig_theta = orig_tree.tree.theta
             
-            chosen_faster_feature = faster_tree.tree.tree_.feature[0]
-            chosen_faster_threshold = faster_tree.tree.tree_.threshold[0]
+            chosen_faster_feature = faster_tree.estimator_.tree_.feature[0]
+            chosen_faster_threshold = faster_tree.estimator_.tree_.threshold[0]
             
             print(f"Original model chose: feature={chosen_orig_feature}, θ={chosen_orig_theta:.6f}")
             print(f"Faster model chose: feature={chosen_faster_feature}, threshold={chosen_faster_threshold:.6f}")
