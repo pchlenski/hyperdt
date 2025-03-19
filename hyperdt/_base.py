@@ -323,11 +323,14 @@ class HyperbolicDecisionTree(BaseEstimator):
             apply_recursive(estimator, estimator.tree_.children_right[node_id])
 
         # For random forests, adjust each tree
-        if self.backend in ["sklearn_rf", "xgboost"]:
+        if self.backend == "sklearn_rf":
             for tree in estimator.estimators_:
                 apply_recursive(tree)
         elif self.backend == "sklearn_dt":
             apply_recursive(estimator)
+        elif self.backend == "xgboost":
+            for tree in estimator.get_booster().get_dump():
+                apply_recursive(tree)
 
     def fit(self, X: ArrayLike, y: ArrayLike):
         """
