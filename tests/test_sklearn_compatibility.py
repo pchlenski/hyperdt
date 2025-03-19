@@ -95,7 +95,8 @@ class CompatibilityHyperbolicDecisionTreeClassifier(HyperbolicDecisionTreeClassi
             'non_deterministic': False,
             'array_api_support': False,
             '_xfail_checks': {},
-            'pairwise': False
+            'pairwise': False,
+            'requires_fit': True
         }
         return tags
 
@@ -141,7 +142,8 @@ class CompatibilityHyperbolicDecisionTreeRegressor(HyperbolicDecisionTreeRegress
             'non_deterministic': False,
             'array_api_support': False,
             '_xfail_checks': {},
-            'pairwise': False
+            'pairwise': False,
+            'requires_fit': True
         }
         return tags
 
