@@ -4,407 +4,198 @@ This module implements the core functionality for decision trees that operate
 natively in hyperbolic space.
 """
 
-from typing import Any, Dict, List, Literal, Optional, Tuple, Union, Type, cast, TYPE_CHECKING, TypeVar
+from typing import Any, Literal
 import numpy as np
 from numpy.typing import ArrayLike
-from typing_extensions import Protocol, TypedDict, Annotated, runtime_checkable
 from sklearn.base import BaseEstimator
-from sklearn.utils.validation import check_is_fitted, check_array, check_X_y
-
-# Type aliases for type checking
-T = TypeVar("T", bound=np.generic)
-
-
-def _einstein_midpoint(u: float, v: float, curvature: float = 1.0) -> float:
-    """Calculate the Einstein midpoint between two values."""
-
-    # Get the Lorentz factor for each value
-    gamma_u = 1 / np.sqrt(1 - u**2 / curvature)
-    gamma_v = 1 / np.sqrt(1 - v**2 / curvature)
-
-    # Calculate the Einstein midpoint
-    numerator = gamma_u * u + gamma_v * v
-    denominator = gamma_u + gamma_v
-
-    return numerator / denominator
 
 
 class HyperbolicDecisionTree(BaseEstimator):
-    """Base class for hyperbolic trees with configurable backend
-
-    Parameters
-    ----------
-    backend : str, default="sklearn_dt"
-        The backend to use for the tree estimator.
-        Available backends: "sklearn_dt", "sklearn_rf", "xgboost" (if installed)
-    task : str, default="classification"
-        The task type. Available tasks: "classification", "regression"
-    max_depth : int, default=3
-        The maximum depth of the tree. Must be >= 1.
-    curvature : float, default=1.0
-        The curvature of the hyperbolic space. Must be positive.
-    timelike_dim : int, default=0
-        The index of the timelike dimension in the input data.
-        The remaining dimensions are treated as spacelike.
-    skip_hyperboloid_check : bool, default=False
-        Whether to skip the validation that points lie on a hyperboloid.
-        Set to True for speed if data is already properly formatted.
-    **kwargs :
-        Additional parameters passed to the underlying backend estimator.
-
-    Attributes
-    ----------
-    estimator_ : object
-        The underlying fitted estimator instance.
-    n_features_in_ : int
-        The number of features seen during fit.
-    feature_names_in_ : ndarray of shape (`n_features_in_`,)
-        Names of features seen during fit. Defined only when X has feature names that are all strings.
-    classes_ : ndarray of shape (n_classes,)
-        The classes labels. Only available for classification tasks.
-    """
+    """Base class for Klein wrapper"""
 
     def __init__(
         self,
-        backend: str = "sklearn_dt",
-        task: str = "classification",
-        max_depth: int = 3,
+        backend: Literal["sklearn_dt", "sklearn_rf", "xgboost"] = "sklearn_dt",
+        task: Literal["classification", "regression"] = "classification",
         curvature: float = 1.0,
+        skip_hyperboloid_check: bool = True,
         timelike_dim: int = 0,
-        skip_hyperboloid_check: bool = False,
         **kwargs: Any,
     ):
         self.backend = backend
         self.task = task
-        self.max_depth = max_depth
         self.curvature = curvature
         self.timelike_dim = timelike_dim
         self.skip_hyperboloid_check = skip_hyperboloid_check
         self.kwargs = kwargs
 
-        # Initialize appropriate backend estimator
-        self._init_estimator()
-
-    def _init_estimator(self) -> None:
-        """Initialize the appropriate backend estimator"""
-        # Import here to avoid circular imports
-        from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
-        from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-
-        # Check for optional XGBoost dependency
-        try:
-            import xgboost as xgb
-
-            XGBOOST_AVAILABLE = True
-        except ImportError:
-            XGBOOST_AVAILABLE = False
-
-        backend_map: Dict[str, Dict[str, Type[Any]]] = {
-            "classification": {
-                "sklearn_dt": DecisionTreeClassifier,
-                "sklearn_rf": RandomForestClassifier,
-            },
-            "regression": {
-                "sklearn_dt": DecisionTreeRegressor,
-                "sklearn_rf": RandomForestRegressor,
-            },
+        # Import the appropriate estimator based on task and backend
+        estimator_mapping = {
+            ("classification", "sklearn_dt"): ("sklearn.tree", "DecisionTreeClassifier"),
+            ("classification", "sklearn_rf"): ("sklearn.ensemble", "RandomForestClassifier"),
+            ("classification", "xgboost"): ("xgboost", "XGBClassifier"),
+            ("regression", "sklearn_dt"): ("sklearn.tree", "DecisionTreeRegressor"),
+            ("regression", "sklearn_rf"): ("sklearn.ensemble", "RandomForestRegressor"),
+            ("regression", "xgboost"): ("xgboost", "XGBRegressor"),
         }
+        if (self.task, self.backend) not in estimator_mapping:
+            raise ValueError(f"Unknown task: {self.task} and/or backend: {self.backend}.")
 
-        # Add XGBoost backends if available
-        if XGBOOST_AVAILABLE:
-            backend_map["classification"]["xgboost"] = xgb.XGBClassifier
-            backend_map["regression"]["xgboost"] = xgb.XGBRegressor
+        # Only import the estimator we need; add it to the class
+        module_name, class_name = estimator_mapping[self.task, self.backend]
+        module = __import__(module_name, fromlist=[class_name])
+        estimator_class = getattr(module, class_name)
+        self.estimator_ = estimator_class(**self.kwargs)  # sklearn compatible namings
 
-        if self.task not in backend_map:
-            raise ValueError(f"Unknown task: {self.task}. Use 'classification' or 'regression'.")
+    def _validate_hyperboloid(self, X: ArrayLike) -> None:
+        """Validate the input data: ensure points lie on a hyperboloid."""
+        assert X.ndim == 2, "Input must be a 2D array."
+        X_spacelike = np.delete(X, self.timelike_dim, axis=1)
+        X_timelike = X[:, self.timelike_dim]
+        assert np.all(
+            X_timelike >= 1.0 / self.curvature
+        ), "Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1 / K."
+        assert np.all(
+            X_timelike > np.linalg.norm(X_spacelike, axis=1)
+        ), "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
+        assert np.allclose(
+            np.linalg.norm(X_spacelike, axis=1) ** 2 - X_timelike**2, -1 / self.curvature
+        ), "Points must lie on a hyperboloid: Minkowski norm must equal -1/curvature."
 
-        if self.backend not in backend_map[self.task]:
-            available_backends = list(backend_map[self.task].keys())
-            raise ValueError(f"Unknown backend: {self.backend} for task {self.task}. Available: {available_backends}")
+    def _validate_klein(self, X: ArrayLike) -> None:
+        """Validate the input data: ensure points lie on a hyperboloid."""
+        assert np.all(
+            np.linalg.norm(X, axis=1) <= 1 / self.curvature**0.5
+        ), "Points must lie on a hyperboloid: norms must be <= than 1/sqrt(K)."
 
-        estimator_class = backend_map[self.task][self.backend]
+    def _preprocess(self, X: ArrayLike) -> np.ndarray:
+        """Preprocess the input data: convert to Klein coordinates."""
+        X_spacelike = np.delete(X, self.timelike_dim, axis=1)
+        X_timelike = X[:, self.timelike_dim]
+        return X_spacelike / X_timelike.reshape(-1, 1)
 
-        # Prepare keyword arguments based on backend type
-        kwargs = self.kwargs.copy()
+    def _einstein_midpoint(self, u: float, v: float) -> float:
+        """Calculate the Einstein midpoint between two values."""
 
-        # Backend-specific parameter handling
-        if self.backend in ["sklearn_rf", "xgboost"]:
-            # RandomForest doesn't support 'splitter' parameter
-            if "splitter" in kwargs:
-                del kwargs["splitter"]
+        # Get the Lorentz factor for each value
+        gamma_u = 1 / np.sqrt(1 - u**2 / self.curvature)
+        gamma_v = 1 / np.sqrt(1 - v**2 / self.curvature)
 
-        # Add max_depth to supported backends
-        if self.backend in ["sklearn_dt", "sklearn_rf", "xgboost"]:
-            kwargs["max_depth"] = self.max_depth
+        # Calculate the Einstein midpoint
+        numerator = gamma_u * u + gamma_v * v
+        denominator = gamma_u + gamma_v
 
-        # Initialize the estimator with appropriate parameters
-        self.estimator_ = estimator_class(**kwargs)
+        return numerator / denominator
 
-    # Class attribute for scikit-learn >= 1.7
-    # This should be a dictionary, not a property
-    __sklearn_tags__ = {
-        # Explicitly mark what we don't support
-        "allow_nan": False,  # NaN values are not supported in hyperbolic space
-        "handles_1d_data": False,  # 1D data doesn't make sense in hyperbolic space
-        "requires_positive_X": False,
-        "requires_positive_y": False,
-        "X_types": ["2darray"],  # Only support dense arrays
-        "poor_score": False,
-        "no_validation": True,  # We do our own validation for hyperboloid constraints
-        "pairwise": False,
-        "multioutput": False,
-        "requires_fit": True,
-        "requires_y": True,  # This estimator requires y for fitting
-        "multilabel": False,  # Added in sklearn 1.0+
-        "non_deterministic": False,  # Added in sklearn 1.3+
-        "array_api_support": False,  # Added in sklearn 1.4+
-        # Explicitly skip tests that don't apply to hyperbolic space
-        "_skip_test": False,
-        "_xfail_checks": {
-            "check_estimators_nan_inf": "NaN/inf not supported in hyperbolic space",
-            "check_estimator_sparse_data": "Sparse matrices not supported in hyperbolic space",
-            "check_dtype_object": "Object dtypes not supported",
-            "check_methods_subset_invariance": "Hyperbolic constraints violated with subsets",
-            "check_fit1d": "1D data not supported in hyperbolic space",
-            "check_fit_check_is_fitted": "Custom fit/predict validation",
-            "check_sample_weights_invariance": "Not all sample weights preserve hyperboloid",
-        },
-    }
+    def _fix_node_recursive(self, estimator: Any, node_id: int, X_klein: np.ndarray) -> None:
+        """Fix the tree to use Einstein midpoints."""
 
-    # Keep the _get_tags method for backward compatibility with older sklearn versions
-    def _get_tags(self):
-        """Return estimator tags for scikit-learn < 1.7."""
-        return self.__sklearn_tags__
+        if estimator.tree_.children_left[node_id] == -1:  # Leaf node
+            return
 
-    def _validate_hyperbolic(self, X: np.ndarray) -> None:
-        """
-        Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
-        of all spacelike squares, to simplify indexing.
+        # Get feature and threshold
+        feature = estimator.tree_.feature[node_id]
+        threshold = estimator.tree_.threshold[node_id]
 
-        Parameters
-        ----------
-        X : np.ndarray of shape (n_samples, n_dimensions)
-            The input data points in hyperboloid coordinates.
+        # Get feature values
+        feature_values = X_klein[:, feature]
 
-        Raises
-        ------
-        ValueError
-            If the points do not lie on a hyperboloid with the specified curvature.
-        """
-        # Check dimensions
-        if X.shape[1] <= self.timelike_dim:
-            raise ValueError(
-                f"Timelike dimension index {self.timelike_dim} is out of bounds for data with {X.shape[1]} dimensions"
-            )
+        # Adjust threshold to be the average of closest values on either side
+        left_mask = feature_values <= threshold
+        right_mask = ~left_mask
 
-        dims = np.delete(np.arange(X.shape[1]), self.timelike_dim)
+        # Adjust this node's threshold using Einstein midpoints instead of naive averages as in base sklearn
+        left_max = np.max(feature_values[left_mask])  # Closest point from left
+        right_min = np.min(feature_values[right_mask])  # Closest point from right
+        estimator.tree_.threshold[node_id] = self._einstein_midpoint(left_max, right_min)
 
-        # Ensure Minkowski norm
-        minkowski_norm = np.sum(X[:, dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2
-        if not np.allclose(minkowski_norm, -1 / self.curvature, atol=1e-3):
-            raise ValueError(f"Points must lie on a hyperboloid: Minkowski norm does not equal {-1 / self.curvature}.")
+        # Recurse
+        self._fix_node_recursive(estimator, estimator.tree_.children_left[node_id], X_klein[left_mask])
+        self._fix_node_recursive(estimator, estimator.tree_.children_right[node_id], X_klein[right_mask])
 
-        # Ensure timelike
-        if not np.all(X[:, self.timelike_dim] > 1.0 / self.curvature):
-            raise ValueError("Points must lie on a hyperboloid: Value at timelike dimension must be greater than 1.")
-
-        # Ensure hyperboloid
-        if not np.all(X[:, self.timelike_dim] > np.linalg.norm(X[:, dims], axis=1)):
-            raise ValueError(
-                "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
-            )
-
-    def _validate_data(self, X, y=None, reset=True, validate_separately=False, **check_params):
-        """Validate input data and set or check the `n_features_in_` attribute.
-
-        Parameters
-        ----------
-        X : {array-like, sparse matrix, dataframe} of shape (n_samples, n_features)
-            The input samples.
-        y : array-like of shape (n_samples,), default=None
-            The targets. If None, `check_array` is called on `X` and
-            `check_X_y` is called otherwise.
-        reset : bool, default=True
-            Whether to reset the `n_features_in_` attribute.
-            If False, the input will be checked for consistency with data
-            provided when reset was last True.
-        validate_separately : bool, default=False
-            If True, call validate_X_y instead of check_X_y.
-        **check_params : kwargs
-            Parameters passed to :func:`sklearn.utils.check_array` or
-            :func:`sklearn.utils.check_X_y`.
-
-        Returns
-        -------
-        out : ndarray, sparse matrix, or tuple of these
-            The validated input. A tuple is returned if `y` is not None.
-        """
-        # Create a minimal set of safe parameters for direct check_array/check_X_y calls
-        # That don't depend on scikit-learn version
-        minimal_params = {}
-        for param_name in ["accept_sparse", "dtype", "ensure_2d"]:
-            if param_name in check_params:
-                minimal_params[param_name] = check_params[param_name]
-
-        # Special case multi_output for check_X_y
-        if "multi_output" in check_params and y is not None:
-            minimal_params["multi_output"] = check_params["multi_output"]
-
-        # If predicting (y is None), override the requires_y tag check
-        if y is None and self.__sklearn_tags__.get("requires_y", False):
-            # For prediction, just validate X without requiring y
-            X_array = check_array(X, **minimal_params)
-            if reset:
-                self.n_features_in_ = X_array.shape[1]
-            return X_array
-
-        # Use the parent method for validation if possible
-        try:
-            # Try to use parent's _validate_data
-            # Original parameters can be passed to BaseEstimator._validate_data
-            result = super()._validate_data(X, y, reset=reset, validate_separately=validate_separately, **check_params)
-            return result
-        except (AttributeError, TypeError):
-            # Fall back to direct validation with minimal parameters
-            if y is None:
-                X_array = check_array(X, **minimal_params)
-                if reset:
-                    self.n_features_in_ = X_array.shape[1]
-                return X_array
-            else:
-                X_array, y_array = check_X_y(X, y, **minimal_params)
-                if reset:
-                    self.n_features_in_ = X_array.shape[1]
-                return X_array, y_array
-
-    def _adjust_thresholds(self, estimator, X_klein, indices):
-        """Adjust thresholds for a decision tree after fitting in Klein coordinates.
-
-        Parameters
-        ----------
-        estimator : object
-            The fitted decision tree.
-        X_klein : np.ndarray of shape (n_samples, n_features)
-            The training data in Klein coordinates.
-        indices : array-like of shape (n_samples,)
-            The indices of the training samples.
-        """
-
-        def apply_recursive(estimator, node_id=0):
-            """Recursively adjust thresholds for a decision tree."""
-            if estimator.tree_.children_left[node_id] == -1:  # Leaf node
-                return
-
-            # Get feature and threshold
-            feature = estimator.tree_.feature[node_id]
-            threshold = estimator.tree_.threshold[node_id]
-
-            # Find samples that land on this node
-            node_indices = indices[estimator.decision_path(X_klein).toarray()[:, node_id] > 0]
-
-            if len(node_indices) == 0:
-                # If no samples, can't adjust
-                return
-
-            # Get feature values
-            feature_values = X_klein[node_indices, feature]
-
-            # Adjust threshold to be the average of closest values on either side
-            left_mask = feature_values <= threshold
-            right_mask = ~left_mask
-
-            if np.any(left_mask) and np.any(right_mask):
-                left_max = np.max(feature_values[left_mask])
-                right_min = np.min(feature_values[right_mask])
-                estimator.tree_.threshold[node_id] = _einstein_midpoint(left_max, right_min, self.curvature)
-
-            # Recurse
-            apply_recursive(estimator, estimator.tree_.children_left[node_id])
-            apply_recursive(estimator, estimator.tree_.children_right[node_id])
-
-        # For random forests, adjust each tree
-        if self.backend == "sklearn_rf":
-            for tree in estimator.estimators_:
-                apply_recursive(tree)
-        elif self.backend == "sklearn_dt":
-            apply_recursive(estimator)
+    def _postprocess(self, X_klein: np.ndarray) -> np.ndarray:
+        """Postprocess estimator: change to Einstein midpoints"""
+        if self.backend == "sklearn_dt":
+            self._fix_node_recursive(self.estimator_, 0, X_klein)
+        elif self.backend == "sklearn_rf":
+            for tree in self.estimator_.estimators_:
+                self._fix_node_recursive(tree, 0, X_klein)
         elif self.backend == "xgboost":
-            for tree in estimator.get_booster().get_dump():
-                apply_recursive(tree)
+            raise NotImplementedError("XGBoost does not support postprocessing yet.")
+            # for tree in self.estimator.get_booster().get_dump():
+            #     self._fix_node_recursive(tree, 0, X_klein, np.arange(len(X_klein)))
 
-    def fit(self, X: ArrayLike, y: ArrayLike):
+    def fit(self, X: ArrayLike, y: ArrayLike, preprocess: bool = True) -> "HyperbolicDecisionTree":
         """
-        Fit hyperbolic decision tree.
+        Fit the hyperbolic decision tree.
 
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_dimensions)
-            The training input samples in hyperboloid coordinates
-        y : array-like of shape (n_samples,)
-            Target values.
+        Args:
+        -----
+        X: ArrayLike
+            The input data.
+        y: ArrayLike
+            The target data.
+        preprocess: bool (default: True)
+            Whether to preprocess the data by converting from hyperboloid to Klein coordinates.
 
-        Returns
-        -------
-        self : object
-            Fitted estimator.
+        Returns:
+        --------
+        self: HyperbolicDecisionTree
+            The fitted hyperbolic decision tree predictor.
         """
-        # Validate input data
-        X_array, y_array = self._validate_data(
-            X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, multi_output=False
-        )
-
-        # Check hyperboloid constraints if needed
-        if not self.skip_hyperboloid_check:
-            try:
-                self._validate_hyperbolic(X_array)
-            except (ValueError, AssertionError) as e:
-                raise ValueError(f"Input data does not satisfy hyperboloid constraints: {str(e)}")
-
-        # Convert to Klein coordinates (x_d/x_0)
-        x0 = X_array[:, self.timelike_dim]
-        X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
-
-        # Fit backend estimator
-        self.estimator_.fit(X_klein, y_array)
-
-        # Adjust thresholds for decision trees and tree ensembles
-        if self.backend in ["sklearn_dt", "sklearn_rf", "xgboost"]:
-            self._adjust_thresholds(self.estimator_, X_klein, np.arange(len(X_array)))
-
+        if preprocess:
+            self._validate_hyperboloid(X)
+            X_klein = self._preprocess(X)
+        else:
+            self._validate_klein(X)
+            X_klein = X
+        self.estimator_.fit(X_klein, y)
+        if preprocess:
+            self._postprocess(X_klein)
         return self
 
-    def predict(self, X: ArrayLike) -> np.ndarray:
+    def predict(self, X: ArrayLike, preprocess: bool = True) -> np.ndarray:
+        """Predict the output for the input data.
+
+        Args:
+        -----
+        X: ArrayLike
+            The input data.
+        preprocess: bool (default: True)
+            Whether to preprocess the data by converting from hyperboloid to Klein coordinates.
+
+        Returns:
+        --------
+        y_pred: np.ndarray
+            The predicted output.
         """
-        Predict class or regression value for X.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_dimensions)
-            The input samples in hyperboloid coordinates.
-
-        Returns
-        -------
-        y : ndarray of shape (n_samples,)
-            The predicted values.
-        """
-        # Check if fitted
-        check_is_fitted(self, ["estimator_", "n_features_in_"])
-
-        # Validate input data
-        X_array = self._validate_data(
-            X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, reset=False
-        )
-
-        # Check hyperboloid constraints if needed
-        if not self.skip_hyperboloid_check:
-            try:
-                self._validate_hyperbolic(X_array)
-            except (ValueError, AssertionError) as e:
-                raise ValueError(f"Input data does not satisfy hyperboloid constraints: {str(e)}")
-
-        # Convert to Klein coordinates
-        x0 = X_array[:, self.timelike_dim]
-        X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
-
-        # Predict using backend estimator
+        if preprocess:
+            self._validate_hyperboloid(X)
+            X_klein = self._preprocess(X)
+        else:
+            self._validate_klein(X)
+            X_klein = X
         return self.estimator_.predict(X_klein)
+
+    def predict_proba(self, X: ArrayLike, preprocess: bool = True) -> np.ndarray:
+        """Predict the output for the input data.
+
+        Args:
+        -----
+        X: ArrayLike
+            The input data.
+        preprocess: bool (default: True)
+            Whether to preprocess the data by converting from hyperboloid to Klein coordinates.
+
+        Returns:
+        --------
+        y_pred: np.ndarray
+            The predicted output.
+        """
+        if preprocess:
+            self._validate_hyperboloid(X)
+            X_klein = self._preprocess(X)
+        else:
+            self._validate_klein(X)
+            X_klein = X
+        return self.estimator_.predict_proba(X_klein)

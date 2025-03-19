@@ -1,6 +1,6 @@
 """Toy data for hyperboloid classification"""
 
-from typing import Tuple, Literal, Optional
+from typing import Tuple, Optional
 
 import numpy as np
 from geomstats.geometry.hyperboloid import Hyperboloid

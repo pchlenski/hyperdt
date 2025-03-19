@@ -5,7 +5,6 @@ This file contains tests to check that the interfaces work as expected.
 
 import pytest
 import numpy as np
-from typing import Any, Dict, List, Optional, Tuple, Union, cast
 
 from hyperdt import (
     HyperbolicDecisionTree,
@@ -13,15 +12,9 @@ from hyperdt import (
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
-    XGBOOST_AVAILABLE,
+    HyperbolicXGBoostClassifier,
+    HyperbolicXGBoostRegressor,
 )
-
-# Import XGBoost types if available
-if XGBOOST_AVAILABLE:
-    from hyperdt import (
-        HyperbolicXGBoostClassifier,
-        HyperbolicXGBoostRegressor,
-    )
 
 
 # Create a fixture for the data
@@ -106,7 +99,6 @@ def test_random_forest_regressor(hyperbolic_data):
     assert rf_reg.feature_importances_ is not None
 
 
-@pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="XGBoost not installed")
 def test_xgboost_classifier(hyperbolic_data):
     """Test that HyperbolicXGBoostClassifier works."""
     X, y_class, _ = hyperbolic_data
@@ -124,7 +116,6 @@ def test_xgboost_classifier(hyperbolic_data):
     assert xgb_clf.feature_importances_ is not None
 
 
-@pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="XGBoost not installed")
 def test_xgboost_regressor(hyperbolic_data):
     """Test that HyperbolicXGBoostRegressor works."""
     X, _, y_reg = hyperbolic_data

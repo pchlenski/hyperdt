@@ -20,7 +20,7 @@ from .ensemble import (
 
 # Check if XGBoost is available and import optional XGBoost implementations
 try:
-    from ._xgboost import (
+    from .xgboost import (
         HyperbolicXGBoostClassifier,
         HyperbolicXGBoostRegressor,
         XGBOOST_AVAILABLE,
