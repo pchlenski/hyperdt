@@ -7,9 +7,6 @@
 [![Tests](https://github.com/pchlenski/hyperdt/actions/workflows/tests.yml/badge.svg)](https://github.com/pchlenski/hyperdt/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/pchlenski/hyperdt/branch/main/graph/badge.svg)](https://codecov.io/gh/pchlenski/hyperdt)
 [![Code Style: Black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Mypy: Checked](https://img.shields.io/badge/mypy-checked-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/test_typing.py)
-[![sklearn: Compatible](https://img.shields.io/badge/sklearn-compatible-brightgreen.svg)](https://github.com/pchlenski/hyperdt/blob/main/tests/test_sklearn_compatibility.py)
-[![ICLR 2024](https://img.shields.io/badge/ICLR-2024-blueviolet.svg)](https://openreview.net/forum?id=TTonmgTT9X)
 
 This repository contains code for the paper Fast Hyperboloid Decision Tree Algorithms (ICLR 2024), which you can find
 at one of these links:
@@ -69,6 +66,12 @@ The hyperDT package is structured as follows:
 - `hyperdt/ensemble.py`: HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
 - `hyperdt/_xgboost.py`: XGBoost integration (requires `pip install hyperdt[xgboost]`)
 - `hyperdt/legacy/`: Original implementation (requires `pip install hyperdt[legacy]`)
+  - `hyperdt/legacy/dataloaders`: Functions for loading benchmarking data into HoroRF
+  - `hyperdt/legacy/conversions`: Convert between hyperboloid, Poincare, and Beltrami-Klein models
+  - `hyperdt/legacy/ensemble`: Legacy HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
+  - `hyperdt/legacy/hyperbolic_trig`: Angular processing and midpoint calculations in the hyperboloid model
+  - `hyperdt/legacy/tree`: Legacy HyperbolicDecisionTreeClassifier and HyperbolicDecisionTreeRegressor, plus base classes
+  - `hyperdt/legacy/visualization`: Code to visualize decision boundaries on the Poincare disk
 - `hyperdt/toy_data.py`: Utilities for generating synthetic hyperbolic datasets
 - `tests/`: Test files for verifying functionality
 
@@ -87,7 +90,7 @@ The package has a modular design with optional dependencies:
 ## Reproducibility and data availability
 All figures and tables in the paper were generated using a combination of Python scripts and Jupyter notebooks. The notebooks used in development were filtered down to only those that remained relevant to the final paper and moved to the `notebooks/archive` directory. The `notebooks` directory contains a tutorial and symbolic links to notebooks of particular relevance to a figure, table, or section of a paper, named according to the section they reproduce.
 
-`hororf_benchmarks.py` runs the benchmarks contributing to Tables 1, 5, and 6, and `scaling_benchmarks.py` runs the benchmarks contributing to Figures 6 and 7.
+`benchmarks/hororf_benchmarks.py` runs the benchmarks contributing to Tables 1, 5, and 6, and `benchmarks/scaling_benchmarks.py` runs the benchmarks contributing to Figures 6 and 7.
 
 All relevant datasets, plus benchmarking code outputs, can be found on [Google Drive](https://drive.google.com/drive/folders/11ORbG_5N1RM54ODzx2pk28CG2SbzPIRy?usp=sharing).
 
