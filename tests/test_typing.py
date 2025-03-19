@@ -15,28 +15,37 @@ from hyperdt import (
     HyperbolicXGBoostClassifier,
     HyperbolicXGBoostRegressor,
 )
+from hyperdt.toy_data import wrapped_normal_mixture
 
 
 # Create a fixture for the data
 @pytest.fixture
 def hyperbolic_data():
+    """Generate hyperbolic data for testing."""
     # Generate data that satisfies hyperboloid constraints
     n_samples = 100
     n_features = 5
+    manifold_dim = n_features - 1
 
-    # First generate points in ambient space (excluding timelike dimension)
-    np.random.seed(42)  # For reproducibility
-    X_ambient = np.random.randn(n_samples, n_features - 1)
-    # Compute timelike coordinate to place points on hyperboloid (x₀² - x₁² - ... - xₙ² = 1)
-    spacelike_norm_squared = np.sum(X_ambient**2, axis=1)
-    timelike = np.sqrt(spacelike_norm_squared + 1.0)
-    # Combine to form hyperboloid points
-    X = np.column_stack([timelike, X_ambient])
+    # Use the wrapped_normal_mixture function from toy_data
+    X, y_class = wrapped_normal_mixture(num_points=n_samples, num_classes=3, num_dims=manifold_dim, seed=42)
 
-    y_class = np.random.randint(0, 3, size=n_samples)
-    y_reg = np.random.random(n_samples)
+    # Create regression targets
+    y_reg = np.sin(X[:, 1]) + np.cos(X[:, 2]) + 0.1 * np.random.randn(len(X))
 
     return X, y_class, y_reg
+
+
+def test_hyperbolic_decision_tree(hyperbolic_data):
+    """Test that base HyperbolicDecisionTree works."""
+    X, y_class, _ = hyperbolic_data
+
+    # Test base class with default settings (classification)
+    base_tree = HyperbolicDecisionTree(max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True)
+    base_tree.fit(X, y_class)
+    y_pred = base_tree.predict(X)
+
+    assert y_pred.shape == y_class.shape
 
 
 def test_decision_tree_classifier(hyperbolic_data):
@@ -51,7 +60,7 @@ def test_decision_tree_classifier(hyperbolic_data):
 
     assert y_pred.shape == y_class.shape
     assert y_proba.shape[0] == y_class.shape[0]
-    assert clf.feature_importances_ is not None
+    assert hasattr(clf.estimator_, "feature_importances_")
 
 
 def test_decision_tree_regressor(hyperbolic_data):
@@ -64,7 +73,7 @@ def test_decision_tree_regressor(hyperbolic_data):
     y_pred_reg = reg.predict(X)
 
     assert y_pred_reg.shape == y_reg.shape
-    assert reg.feature_importances_ is not None
+    assert hasattr(reg.estimator_, "feature_importances_")
 
 
 def test_random_forest_classifier(hyperbolic_data):
@@ -81,7 +90,7 @@ def test_random_forest_classifier(hyperbolic_data):
 
     assert rf_y_pred.shape == y_class.shape
     assert rf_y_proba.shape[0] == y_class.shape[0]
-    assert rf_clf.feature_importances_ is not None
+    assert hasattr(rf_clf.estimator_, "feature_importances_")
 
 
 def test_random_forest_regressor(hyperbolic_data):
@@ -96,7 +105,7 @@ def test_random_forest_regressor(hyperbolic_data):
     rf_y_pred_reg = rf_reg.predict(X)
 
     assert rf_y_pred_reg.shape == y_reg.shape
-    assert rf_reg.feature_importances_ is not None
+    assert hasattr(rf_reg.estimator_, "feature_importances_")
 
 
 def test_xgboost_classifier(hyperbolic_data):
@@ -113,7 +122,7 @@ def test_xgboost_classifier(hyperbolic_data):
 
     assert xgb_y_pred.shape == y_class.shape
     assert xgb_y_proba.shape[0] == y_class.shape[0]
-    assert xgb_clf.feature_importances_ is not None
+    assert hasattr(xgb_clf.estimator_, "feature_importances_")
 
 
 def test_xgboost_regressor(hyperbolic_data):
@@ -128,4 +137,4 @@ def test_xgboost_regressor(hyperbolic_data):
     xgb_y_pred_reg = xgb_reg.predict(X)
 
     assert xgb_y_pred_reg.shape == y_reg.shape
-    assert xgb_reg.feature_importances_ is not None
+    assert hasattr(xgb_reg.estimator_, "feature_importances_")

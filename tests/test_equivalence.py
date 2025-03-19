@@ -12,12 +12,8 @@ Visual comparisons and benchmarks have been moved to notebooks/visualization_equ
 """
 
 import numpy as np
-from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-from sklearn.tree._tree import TREE_LEAF
 import time
-
-import pytest
 
 # Import the faster implementation
 from hyperdt import HyperbolicDecisionTreeClassifier as FasterHDTC
@@ -33,7 +29,7 @@ def test_mathematical_equivalence():
 
     # Generate test points
     n_points = 1000
-    X, _ = wrapped_normal_mixture(n_points, random_state=42)
+    X, _ = wrapped_normal_mixture(num_points=n_points, seed=42)
 
     # Generate angles in the valid range
     n_angles = 10
@@ -100,7 +96,9 @@ def test_prediction_agreement(depths=[1, 3, 5, 10, None]):
 
         for i, seed in enumerate(seeds):
             # Generate data
-            X, y = wrapped_normal_mixture(n_samples, n_classes, n_features, random_state=seed)
+            X, y = wrapped_normal_mixture(
+                num_points=n_samples, num_classes=n_classes, num_dims=n_features - 1, seed=seed
+            )
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed)
 
             # Create and fit models
@@ -175,7 +173,7 @@ def test_decision_boundary_agreement():
 
     depth = 5
     # Generate 2D hyperbolic data (3D points on hyperboloid)
-    X, y = wrapped_normal_mixture(500, n_classes=3, n_features=3, random_state=42)
+    X, y = wrapped_normal_mixture(num_points=500, num_classes=3, num_dims=2, seed=42)
 
     # Create and fit models
     orig_tree = OriginalHDTC(max_depth=depth, timelike_dim=0, skip_hyperboloid_check=True)
@@ -214,7 +212,7 @@ def test_information_gain_agreement():
 
     # Use seed 44 which we know has a tie
     seed = 44
-    X, y = wrapped_normal_mixture(100, n_classes=3, n_features=5, random_state=seed)
+    X, y = wrapped_normal_mixture(num_points=100, num_classes=3, num_dims=4, seed=seed)
 
     # Create models
     orig_tree = OriginalHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
@@ -244,7 +242,7 @@ def test_higher_dimensions():
 
     for dim in dimensions:
         print(f"\nTesting with {dim} dimensions:")
-        X, y = wrapped_normal_mixture(500, n_classes=3, n_features=dim, random_state=42)
+        X, y = wrapped_normal_mixture(num_points=500, num_classes=3, num_dims=dim - 1, seed=42)
 
         # Create models
         orig_tree = OriginalHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
@@ -279,7 +277,7 @@ def test_baseline_performance():
     n_classes = 3
 
     # Generate data
-    X, y = wrapped_normal_mixture(n_samples, n_classes, n_features, random_state=42)
+    X, y = wrapped_normal_mixture(num_points=n_samples, num_classes=n_classes, num_dims=n_features - 1, seed=42)
 
     # Test original implementation
     orig_tree = OriginalHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
@@ -315,7 +313,7 @@ def test_numerical_precision():
     print("\n=== Testing Numerical Precision ===")
 
     # Generate a simple dataset for training
-    X, y = wrapped_normal_mixture(100, n_classes=2, n_features=3, random_state=42)
+    X, y = wrapped_normal_mixture(num_points=100, num_classes=2, num_dims=2, seed=42)
 
     # Create and fit simple trees
     orig_tree = OriginalHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
