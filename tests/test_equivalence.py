@@ -23,52 +23,17 @@ import pytest
 from hyperdt import HyperbolicDecisionTreeClassifier as FasterHDTC
 
 # Try to import the legacy implementation
-try:
-    from hyperdt.legacy.tree import HyperbolicDecisionTreeClassifier as OriginalHDTC
-    from hyperdt.toy_data import wrapped_normal_mixture
-    LEGACY_AVAILABLE = True
-except ImportError:
-    LEGACY_AVAILABLE = False
-    # Create a dummy wrapped_normal_mixture function
-    def wrapped_normal_mixture(*args, **kwargs):
-        return None, None
+from hyperdt.legacy.tree import HyperbolicDecisionTreeClassifier as OriginalHDTC
+from hyperdt.toy_data import wrapped_normal_mixture
 
 
-def generate_hyperbolic_data(n_samples, n_classes=2, n_features=3, random_state=None):
-    """Generate synthetic data on the hyperboloid using wrapped normal mixture"""
-    # Set seed if provided
-    original_seed = None
-    if random_state is not None:
-        original_seed = np.random.get_state()
-        np.random.seed(random_state)
-
-    # Generate data
-    X, y = wrapped_normal_mixture(
-        num_points=n_samples,
-        num_classes=n_classes,
-        num_dims=n_features - 1,  # Ambient dimension is manifold dim + 1
-        noise_std=1.0,
-        adjust_for_dim=True,
-    )
-
-    # Restore random state if needed
-    if original_seed is not None:
-        np.random.set_state(original_seed)
-
-    return X, y
-
-
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_mathematical_equivalence():
-    """
-    Verify that the angle-based decision boundary (original) and the
-    ratio-based decision boundary (faster) are mathematically equivalent.
-    """
+    """Verify angle- and ratio-based decision boundaries are mathematically equivalent."""
     print("\n== Testing Mathematical Equivalence ==")
 
     # Generate test points
     n_points = 1000
-    X, _ = generate_hyperbolic_data(n_points, random_state=42)
+    X, _ = wrapped_normal_mixture(n_points, random_state=42)
 
     # Generate angles in the valid range
     n_angles = 10
@@ -113,11 +78,8 @@ def test_mathematical_equivalence():
     print(f"Mathematical equivalence verified")
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_prediction_agreement(depths=[1, 3, 5, 10, None]):
-    """
-    Test prediction agreement between implementations across various tree depths.
-    """
+    """Test prediction agreement between implementations across various tree depths."""
     print("\n== Testing Prediction Agreement Across Depths ==")
 
     n_trees_per_depth = 5  # Reduced for faster tests
@@ -138,7 +100,7 @@ def test_prediction_agreement(depths=[1, 3, 5, 10, None]):
 
         for i, seed in enumerate(seeds):
             # Generate data
-            X, y = generate_hyperbolic_data(n_samples, n_classes, n_features, random_state=seed)
+            X, y = wrapped_normal_mixture(n_samples, n_classes, n_features, random_state=seed)
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=seed)
 
             # Create and fit models
@@ -202,21 +164,18 @@ def test_prediction_agreement(depths=[1, 3, 5, 10, None]):
 
         print(f"  Mean prediction agreement: {mean_agreement:.6f}")
         print(f"  Mean split match rate: {mean_split_match:.6f}")
-        
+
         # Assert high agreement
         assert mean_agreement > 0.95, f"Low prediction agreement ({mean_agreement:.4f}) at depth {depth}"
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_decision_boundary_agreement():
-    """
-    Test that the decision boundaries between implementations have high agreement.
-    """
+    """Test that the decision boundaries between implementations have high agreement."""
     print(f"\n== Testing Decision Boundary Agreement ==")
 
     depth = 5
     # Generate 2D hyperbolic data (3D points on hyperboloid)
-    X, y = generate_hyperbolic_data(500, n_classes=3, n_features=3, random_state=42)
+    X, y = wrapped_normal_mixture(500, n_classes=3, n_features=3, random_state=42)
 
     # Create and fit models
     orig_tree = OriginalHDTC(max_depth=depth, timelike_dim=0, skip_hyperboloid_check=True)
@@ -244,22 +203,18 @@ def test_decision_boundary_agreement():
     agreement_rate = np.mean(orig_preds == faster_preds)
 
     print(f"Decision boundary agreement rate: {agreement_rate:.6f}")
-    
+
     # Assert high agreement
     assert agreement_rate > 0.95, f"Low decision boundary agreement ({agreement_rate:.4f})"
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_information_gain_agreement():
-    """
-    Test that implementations have high prediction agreement even when there are ties
-    in information gain.
-    """
+    """Test that implementations have high prediction agreement even when there are ties in information gain."""
     print(f"\n== Testing Information Gain Agreement ==")
 
     # Use seed 44 which we know has a tie
     seed = 44
-    X, y = generate_hyperbolic_data(100, n_classes=3, n_features=5, random_state=seed)
+    X, y = wrapped_normal_mixture(100, n_classes=3, n_features=5, random_state=seed)
 
     # Create models
     orig_tree = OriginalHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
@@ -275,13 +230,12 @@ def test_information_gain_agreement():
 
     agreement = np.mean(orig_preds == faster_preds)
     print(f"Prediction agreement with ties: {agreement:.6f}")
-    
+
     # Assert reasonable agreement
     # Note: we don't expect perfect agreement due to tie-breaking differences
     assert agreement > 0.9, f"Low prediction agreement ({agreement:.4f}) with information gain ties"
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_higher_dimensions():
     """Test agreement with higher dimensional data"""
     print("\n== Testing Higher Dimensions ==")
@@ -290,7 +244,7 @@ def test_higher_dimensions():
 
     for dim in dimensions:
         print(f"\nTesting with {dim} dimensions:")
-        X, y = generate_hyperbolic_data(500, n_classes=3, n_features=dim, random_state=42)
+        X, y = wrapped_normal_mixture(500, n_classes=3, n_features=dim, random_state=42)
 
         # Create models
         orig_tree = OriginalHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
@@ -315,12 +269,8 @@ def test_higher_dimensions():
         print(f"Probability MSE: {prob_mse:.6f}")
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_baseline_performance():
-    """
-    Test faster implementation is indeed faster than original implementation.
-    Reduced version of full performance tests in the notebook.
-    """
+    """Test that the faster implementation is indeed faster than the original implementation."""
     print("\n== Testing Performance ==")
 
     # Use smaller dataset for quicker tests
@@ -329,7 +279,7 @@ def test_baseline_performance():
     n_classes = 3
 
     # Generate data
-    X, y = generate_hyperbolic_data(n_samples, n_classes, n_features, random_state=42)
+    X, y = wrapped_normal_mixture(n_samples, n_classes, n_features, random_state=42)
 
     # Test original implementation
     orig_tree = OriginalHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
@@ -355,18 +305,17 @@ def test_baseline_performance():
     print(f"  Original: {orig_time:.4f}s, Faster: {faster_time:.4f}s")
     print(f"  Speedup: {speedup:.2f}x")
     print(f"  Prediction agreement: {agreement:.6f}")
-    
+
     # Assert the faster implementation actually is faster
     assert faster_time < orig_time, "Faster implementation is not actually faster!"
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_numerical_precision():
     """Test specific edge case at decision boundary"""
     print("\n=== Testing Numerical Precision ===")
 
     # Generate a simple dataset for training
-    X, y = generate_hyperbolic_data(100, n_classes=2, n_features=3, random_state=42)
+    X, y = wrapped_normal_mixture(100, n_classes=2, n_features=3, random_state=42)
 
     # Create and fit simple trees
     orig_tree = OriginalHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
@@ -425,32 +374,16 @@ def test_numerical_precision():
         )
 
 
-@pytest.mark.skipif(not LEGACY_AVAILABLE, reason="Legacy implementation not available")
 def test_all():
     """Run all verification tests"""
     print("=== Running Comprehensive Equivalence Tests ===")
-
-    # Mathematical equivalence test
     test_mathematical_equivalence()
-
-    # Prediction agreement across depths
     test_prediction_agreement()
-
-    # Test with higher dimensions
     test_higher_dimensions()
-
-    # Test decision boundary agreement
     test_decision_boundary_agreement()
-
-    # Test information gain tie handling
     test_information_gain_agreement()
-
-    # Performance comparison
     test_baseline_performance()
-
-    # Numerical precision test
     test_numerical_precision()
-
     print("\n=== All Tests Complete ===")
 
 

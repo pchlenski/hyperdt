@@ -12,12 +12,26 @@ from sklearn.base import BaseEstimator
 from sklearn.utils.validation import check_is_fitted, check_array, check_X_y
 
 # Type aliases for type checking
-T = TypeVar('T', bound=np.generic)
+T = TypeVar("T", bound=np.generic)
+
+
+def _einstein_midpoint(u: float, v: float, curvature: float = 1.0) -> float:
+    """Calculate the Einstein midpoint between two values."""
+
+    # Get the Lorentz factor for each value
+    gamma_u = 1 / np.sqrt(1 - u**2 / curvature)
+    gamma_v = 1 / np.sqrt(1 - v**2 / curvature)
+
+    # Calculate the Einstein midpoint
+    numerator = gamma_u * u + gamma_v * v
+    denominator = gamma_u + gamma_v
+
+    return numerator / denominator
 
 
 class HyperbolicDecisionTree(BaseEstimator):
     """Base class for hyperbolic trees with configurable backend
-    
+
     Parameters
     ----------
     backend : str, default="sklearn_dt"
@@ -35,9 +49,9 @@ class HyperbolicDecisionTree(BaseEstimator):
     skip_hyperboloid_check : bool, default=False
         Whether to skip the validation that points lie on a hyperboloid.
         Set to True for speed if data is already properly formatted.
-    **kwargs : 
+    **kwargs :
         Additional parameters passed to the underlying backend estimator.
-    
+
     Attributes
     ----------
     estimator_ : object
@@ -76,14 +90,15 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Import here to avoid circular imports
         from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
         from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-        
+
         # Check for optional XGBoost dependency
         try:
             import xgboost as xgb
+
             XGBOOST_AVAILABLE = True
         except ImportError:
             XGBOOST_AVAILABLE = False
-            
+
         backend_map: Dict[str, Dict[str, Type[Any]]] = {
             "classification": {
                 "sklearn_dt": DecisionTreeClassifier,
@@ -111,13 +126,13 @@ class HyperbolicDecisionTree(BaseEstimator):
 
         # Prepare keyword arguments based on backend type
         kwargs = self.kwargs.copy()
-        
+
         # Backend-specific parameter handling
-        if self.backend == "sklearn_rf":
+        if self.backend in ["sklearn_rf", "xgboost"]:
             # RandomForest doesn't support 'splitter' parameter
             if "splitter" in kwargs:
                 del kwargs["splitter"]
-        
+
         # Add max_depth to supported backends
         if self.backend in ["sklearn_dt", "sklearn_rf", "xgboost"]:
             kwargs["max_depth"] = self.max_depth
@@ -129,49 +144,48 @@ class HyperbolicDecisionTree(BaseEstimator):
     # This should be a dictionary, not a property
     __sklearn_tags__ = {
         # Explicitly mark what we don't support
-        'allow_nan': False,  # NaN values are not supported in hyperbolic space
-        'handles_1d_data': False,  # 1D data doesn't make sense in hyperbolic space
-        'requires_positive_X': False,
-        'requires_positive_y': False,
-        'X_types': ['2darray'],  # Only support dense arrays
-        'poor_score': False,
-        'no_validation': True,  # We do our own validation for hyperboloid constraints
-        'pairwise': False,
-        'multioutput': False,
-        'requires_fit': True,
-        'requires_y': True,  # This estimator requires y for fitting
-        'multilabel': False,  # Added in sklearn 1.0+
-        'non_deterministic': False,  # Added in sklearn 1.3+
-        'array_api_support': False,  # Added in sklearn 1.4+
-        
+        "allow_nan": False,  # NaN values are not supported in hyperbolic space
+        "handles_1d_data": False,  # 1D data doesn't make sense in hyperbolic space
+        "requires_positive_X": False,
+        "requires_positive_y": False,
+        "X_types": ["2darray"],  # Only support dense arrays
+        "poor_score": False,
+        "no_validation": True,  # We do our own validation for hyperboloid constraints
+        "pairwise": False,
+        "multioutput": False,
+        "requires_fit": True,
+        "requires_y": True,  # This estimator requires y for fitting
+        "multilabel": False,  # Added in sklearn 1.0+
+        "non_deterministic": False,  # Added in sklearn 1.3+
+        "array_api_support": False,  # Added in sklearn 1.4+
         # Explicitly skip tests that don't apply to hyperbolic space
-        '_skip_test': False,
-        '_xfail_checks': {
-            'check_estimators_nan_inf': 'NaN/inf not supported in hyperbolic space',
-            'check_estimator_sparse_data': 'Sparse matrices not supported in hyperbolic space',
-            'check_dtype_object': 'Object dtypes not supported',
-            'check_methods_subset_invariance': 'Hyperbolic constraints violated with subsets',
-            'check_fit1d': '1D data not supported in hyperbolic space',
-            'check_fit_check_is_fitted': 'Custom fit/predict validation',
-            'check_sample_weights_invariance': 'Not all sample weights preserve hyperboloid',
-        }
+        "_skip_test": False,
+        "_xfail_checks": {
+            "check_estimators_nan_inf": "NaN/inf not supported in hyperbolic space",
+            "check_estimator_sparse_data": "Sparse matrices not supported in hyperbolic space",
+            "check_dtype_object": "Object dtypes not supported",
+            "check_methods_subset_invariance": "Hyperbolic constraints violated with subsets",
+            "check_fit1d": "1D data not supported in hyperbolic space",
+            "check_fit_check_is_fitted": "Custom fit/predict validation",
+            "check_sample_weights_invariance": "Not all sample weights preserve hyperboloid",
+        },
     }
-        
+
     # Keep the _get_tags method for backward compatibility with older sklearn versions
     def _get_tags(self):
         """Return estimator tags for scikit-learn < 1.7."""
         return self.__sklearn_tags__
-    
+
     def _validate_hyperbolic(self, X: np.ndarray) -> None:
         """
         Ensure points lie on a hyperboloid - subtract timelike twice from sum of all squares, rather than once from sum
         of all spacelike squares, to simplify indexing.
-        
+
         Parameters
         ----------
         X : np.ndarray of shape (n_samples, n_dimensions)
             The input data points in hyperboloid coordinates.
-            
+
         Raises
         ------
         ValueError
@@ -179,10 +193,12 @@ class HyperbolicDecisionTree(BaseEstimator):
         """
         # Check dimensions
         if X.shape[1] <= self.timelike_dim:
-            raise ValueError(f"Timelike dimension index {self.timelike_dim} is out of bounds for data with {X.shape[1]} dimensions")
-        
+            raise ValueError(
+                f"Timelike dimension index {self.timelike_dim} is out of bounds for data with {X.shape[1]} dimensions"
+            )
+
         dims = np.delete(np.arange(X.shape[1]), self.timelike_dim)
-        
+
         # Ensure Minkowski norm
         minkowski_norm = np.sum(X[:, dims] ** 2, axis=1) - X[:, self.timelike_dim] ** 2
         if not np.allclose(minkowski_norm, -1 / self.curvature, atol=1e-3):
@@ -194,11 +210,13 @@ class HyperbolicDecisionTree(BaseEstimator):
 
         # Ensure hyperboloid
         if not np.all(X[:, self.timelike_dim] > np.linalg.norm(X[:, dims], axis=1)):
-            raise ValueError("Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims.")
-            
+            raise ValueError(
+                "Points must lie on a hyperboloid: Value at timelike dim must exceed norm of spacelike dims."
+            )
+
     def _validate_data(self, X, y=None, reset=True, validate_separately=False, **check_params):
         """Validate input data and set or check the `n_features_in_` attribute.
-        
+
         Parameters
         ----------
         X : {array-like, sparse matrix, dataframe} of shape (n_samples, n_features)
@@ -215,7 +233,7 @@ class HyperbolicDecisionTree(BaseEstimator):
         **check_params : kwargs
             Parameters passed to :func:`sklearn.utils.check_array` or
             :func:`sklearn.utils.check_X_y`.
-            
+
         Returns
         -------
         out : ndarray, sparse matrix, or tuple of these
@@ -224,29 +242,27 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Create a minimal set of safe parameters for direct check_array/check_X_y calls
         # That don't depend on scikit-learn version
         minimal_params = {}
-        for param_name in ['accept_sparse', 'dtype', 'ensure_2d']:
+        for param_name in ["accept_sparse", "dtype", "ensure_2d"]:
             if param_name in check_params:
                 minimal_params[param_name] = check_params[param_name]
-        
+
         # Special case multi_output for check_X_y
-        if 'multi_output' in check_params and y is not None:
-            minimal_params['multi_output'] = check_params['multi_output']
-                
+        if "multi_output" in check_params and y is not None:
+            minimal_params["multi_output"] = check_params["multi_output"]
+
         # If predicting (y is None), override the requires_y tag check
-        if y is None and self.__sklearn_tags__.get('requires_y', False):
+        if y is None and self.__sklearn_tags__.get("requires_y", False):
             # For prediction, just validate X without requiring y
             X_array = check_array(X, **minimal_params)
             if reset:
                 self.n_features_in_ = X_array.shape[1]
             return X_array
-        
+
         # Use the parent method for validation if possible
         try:
-            # Try to use parent's _validate_data 
+            # Try to use parent's _validate_data
             # Original parameters can be passed to BaseEstimator._validate_data
-            result = super()._validate_data(X, y, reset=reset, 
-                                        validate_separately=validate_separately, 
-                                        **check_params)
+            result = super()._validate_data(X, y, reset=reset, validate_separately=validate_separately, **check_params)
             return result
         except (AttributeError, TypeError):
             # Fall back to direct validation with minimal parameters
@@ -263,7 +279,7 @@ class HyperbolicDecisionTree(BaseEstimator):
 
     def _adjust_thresholds(self, estimator, X_klein, indices):
         """Adjust thresholds for a decision tree after fitting in Klein coordinates.
-        
+
         Parameters
         ----------
         estimator : object
@@ -273,60 +289,57 @@ class HyperbolicDecisionTree(BaseEstimator):
         indices : array-like of shape (n_samples,)
             The indices of the training samples.
         """
+
         def apply_recursive(estimator, node_id=0):
             """Recursively adjust thresholds for a decision tree."""
             if estimator.tree_.children_left[node_id] == -1:  # Leaf node
                 return
-            
+
             # Get feature and threshold
             feature = estimator.tree_.feature[node_id]
             threshold = estimator.tree_.threshold[node_id]
-            
+
             # Find samples that land on this node
             node_indices = indices[estimator.decision_path(X_klein).toarray()[:, node_id] > 0]
-            
+
             if len(node_indices) == 0:
                 # If no samples, can't adjust
                 return
-            
+
             # Get feature values
             feature_values = X_klein[node_indices, feature]
-            
+
             # Adjust threshold to be the average of closest values on either side
             left_mask = feature_values <= threshold
             right_mask = ~left_mask
-            
+
             if np.any(left_mask) and np.any(right_mask):
                 left_max = np.max(feature_values[left_mask])
                 right_min = np.min(feature_values[right_mask])
-                estimator.tree_.threshold[node_id] = (left_max + right_min) / 2
-            
+                estimator.tree_.threshold[node_id] = _einstein_midpoint(left_max, right_min, self.curvature)
+
             # Recurse
             apply_recursive(estimator, estimator.tree_.children_left[node_id])
             apply_recursive(estimator, estimator.tree_.children_right[node_id])
-            
+
         # For random forests, adjust each tree
-        if self.backend == "sklearn_rf":
+        if self.backend in ["sklearn_rf", "xgboost"]:
             for tree in estimator.estimators_:
                 apply_recursive(tree)
         elif self.backend == "sklearn_dt":
             apply_recursive(estimator)
 
-    def fit(
-        self, 
-        X: ArrayLike, 
-        y: ArrayLike
-    ):
+    def fit(self, X: ArrayLike, y: ArrayLike):
         """
         Fit hyperbolic decision tree.
-        
+
         Parameters
         ----------
         X : array-like of shape (n_samples, n_dimensions)
             The training input samples in hyperboloid coordinates
         y : array-like of shape (n_samples,)
             Target values.
-            
+
         Returns
         -------
         self : object
@@ -334,13 +347,9 @@ class HyperbolicDecisionTree(BaseEstimator):
         """
         # Validate input data
         X_array, y_array = self._validate_data(
-            X, y, 
-            accept_sparse=False, 
-            dtype=np.float64, 
-            ensure_2d=True, 
-            multi_output=False
+            X, y, accept_sparse=False, dtype=np.float64, ensure_2d=True, multi_output=False
         )
-        
+
         # Check hyperboloid constraints if needed
         if not self.skip_hyperboloid_check:
             try:
@@ -356,23 +365,20 @@ class HyperbolicDecisionTree(BaseEstimator):
         self.estimator_.fit(X_klein, y_array)
 
         # Adjust thresholds for decision trees and tree ensembles
-        if self.backend in ["sklearn_dt", "sklearn_rf"]:
+        if self.backend in ["sklearn_dt", "sklearn_rf", "xgboost"]:
             self._adjust_thresholds(self.estimator_, X_klein, np.arange(len(X_array)))
 
         return self
 
-    def predict(
-        self, 
-        X: ArrayLike
-    ) -> np.ndarray:
+    def predict(self, X: ArrayLike) -> np.ndarray:
         """
         Predict class or regression value for X.
-        
+
         Parameters
         ----------
         X : array-like of shape (n_samples, n_dimensions)
             The input samples in hyperboloid coordinates.
-            
+
         Returns
         -------
         y : ndarray of shape (n_samples,)
@@ -380,27 +386,22 @@ class HyperbolicDecisionTree(BaseEstimator):
         """
         # Check if fitted
         check_is_fitted(self, ["estimator_", "n_features_in_"])
-        
+
         # Validate input data
         X_array = self._validate_data(
-            X, 
-            accept_sparse=False, 
-            dtype=np.float64, 
-            ensure_2d=True, 
-            force_all_finite=True, 
-            reset=False
+            X, accept_sparse=False, dtype=np.float64, ensure_2d=True, force_all_finite=True, reset=False
         )
-        
+
         # Check hyperboloid constraints if needed
         if not self.skip_hyperboloid_check:
             try:
                 self._validate_hyperbolic(X_array)
             except (ValueError, AssertionError) as e:
                 raise ValueError(f"Input data does not satisfy hyperboloid constraints: {str(e)}")
-            
+
         # Convert to Klein coordinates
         x0 = X_array[:, self.timelike_dim]
         X_klein = np.delete(X_array, self.timelike_dim, axis=1) / x0[:, None]
-            
+
         # Predict using backend estimator
         return self.estimator_.predict(X_klein)

@@ -13,7 +13,7 @@ from .tree import HyperbolicDecisionTreeClassifier, HyperbolicDecisionTreeRegres
 
 class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
     """Hyperbolic Random Forest for classification.
-    
+
     Parameters
     ----------
     max_depth : int, default=3
@@ -30,9 +30,9 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
         Whether to skip the validation that points lie on a hyperboloid.
     random_state : int, RandomState instance, default=None
         Controls the randomness of the estimator.
-    **kwargs : 
+    **kwargs :
         Additional parameters passed to the sklearn RandomForestClassifier.
-    
+
     Attributes
     ----------
     estimator_ : RandomForestClassifier
@@ -46,7 +46,7 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
     feature_names_in_ : ndarray of shape (`n_features_in_`,)
         Names of features seen during fit. Only defined if X has feature names.
     """
-    
+
     def __init__(
         self,
         max_depth: int = 3,
@@ -60,7 +60,7 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
     ):
         # Add n_estimators to kwargs
         kwargs["n_estimators"] = n_estimators
-        
+
         # Don't pass splitter parameter to RandomForestClassifier as it doesn't accept it
         # Construct kwargs dict without passing splitter for RandomForest models
         # Note: We intentionally don't pass splitter here since RandomForest doesn't support it
@@ -79,7 +79,7 @@ class HyperbolicRandomForestClassifier(HyperbolicDecisionTreeClassifier):
 
 class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
     """Hyperbolic Random Forest for regression.
-    
+
     Parameters
     ----------
     max_depth : int, default=3
@@ -96,9 +96,9 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
         Whether to skip the validation that points lie on a hyperboloid.
     random_state : int, RandomState instance, default=None
         Controls the randomness of the estimator.
-    **kwargs : 
+    **kwargs :
         Additional parameters passed to the sklearn RandomForestRegressor.
-    
+
     Attributes
     ----------
     estimator_ : RandomForestRegressor
@@ -110,7 +110,7 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
     feature_names_in_ : ndarray of shape (`n_features_in_`,)
         Names of features seen during fit. Only defined if X has feature names.
     """
-    
+
     def __init__(
         self,
         max_depth: int = 3,
@@ -124,7 +124,7 @@ class HyperbolicRandomForestRegressor(HyperbolicDecisionTreeRegressor):
     ):
         # Add n_estimators to kwargs
         kwargs["n_estimators"] = n_estimators
-        
+
         # Don't pass splitter parameter to RandomForestRegressor as it doesn't accept it
         # Construct kwargs dict without passing splitter for RandomForest models
         # Note: We intentionally don't pass splitter here since RandomForest doesn't support it

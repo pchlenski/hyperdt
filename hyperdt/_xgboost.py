@@ -13,14 +13,16 @@ from .tree import HyperbolicDecisionTreeClassifier, HyperbolicDecisionTreeRegres
 # Check if XGBoost is available
 try:
     import xgboost as xgb
+
     XGBOOST_AVAILABLE = True
 except ImportError:
     XGBOOST_AVAILABLE = False
 
 if XGBOOST_AVAILABLE:
+
     class HyperbolicXGBoostClassifier(HyperbolicDecisionTreeClassifier):
         """Hyperbolic XGBoost for classification.
-        
+
         Parameters
         ----------
         max_depth : int, default=3
@@ -37,9 +39,9 @@ if XGBOOST_AVAILABLE:
             Whether to skip the validation that points lie on a hyperboloid.
         random_state : int, RandomState instance, default=None
             Controls the randomness of the estimator.
-        **kwargs : 
+        **kwargs :
             Additional parameters passed to the XGBClassifier.
-        
+
         Attributes
         ----------
         estimator_ : XGBClassifier
@@ -53,7 +55,7 @@ if XGBOOST_AVAILABLE:
         feature_names_in_ : ndarray of shape (`n_features_in_`,)
             Names of features seen during fit. Only defined if X has feature names.
         """
-        
+
         def __init__(
             self,
             max_depth: int = 3,
@@ -68,7 +70,7 @@ if XGBOOST_AVAILABLE:
             # Add XGBoost specific parameters
             kwargs["n_estimators"] = n_estimators
             kwargs["learning_rate"] = learning_rate
-            
+
             super().__init__(
                 backend="xgboost",
                 max_depth=max_depth,
@@ -81,7 +83,7 @@ if XGBOOST_AVAILABLE:
 
     class HyperbolicXGBoostRegressor(HyperbolicDecisionTreeRegressor):
         """Hyperbolic XGBoost for regression.
-        
+
         Parameters
         ----------
         max_depth : int, default=3
@@ -98,9 +100,9 @@ if XGBOOST_AVAILABLE:
             Whether to skip the validation that points lie on a hyperboloid.
         random_state : int, RandomState instance, default=None
             Controls the randomness of the estimator.
-        **kwargs : 
+        **kwargs :
             Additional parameters passed to the XGBRegressor.
-        
+
         Attributes
         ----------
         estimator_ : XGBRegressor
@@ -112,7 +114,7 @@ if XGBOOST_AVAILABLE:
         feature_names_in_ : ndarray of shape (`n_features_in_`,)
             Names of features seen during fit. Only defined if X has feature names.
         """
-        
+
         def __init__(
             self,
             max_depth: int = 3,
@@ -127,7 +129,7 @@ if XGBOOST_AVAILABLE:
             # Add XGBoost specific parameters
             kwargs["n_estimators"] = n_estimators
             kwargs["learning_rate"] = learning_rate
-            
+
             super().__init__(
                 backend="xgboost",
                 max_depth=max_depth,
