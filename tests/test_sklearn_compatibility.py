@@ -2,7 +2,7 @@
 Tests to verify that HyperDT estimators are compatible with scikit-learn's API.
 
 Note: These tests are primarily meant to be run manually, as they might fail with
-different versions of scikit-learn. The GitHub workflow skips these tests and 
+different versions of scikit-learn. The GitHub workflow skips these tests and
 instead runs a simplified compatibility check.
 """
 
@@ -20,9 +20,8 @@ from hyperdt import (
 )
 
 # Import custom estimator checks
-from sklearn.utils.estimator_checks import (
-    parametrize_with_checks, check_estimator as sklearn_check_estimator
-)
+from sklearn.utils.estimator_checks import parametrize_with_checks, check_estimator as sklearn_check_estimator
+
 
 # Generate test data that's appropriate for hyperbolic space
 def generate_hyperbolic_data(n_samples=100, n_features=5, random_state=42):
@@ -57,11 +56,12 @@ def generate_hyperbolic_data(n_samples=100, n_features=5, random_state=42):
 # Create a modified DecisionTreeClassifier for compatibility tests
 class CompatibilityHyperbolicDecisionTreeClassifier(HyperbolicDecisionTreeClassifier):
     """Modified classifier for sklearn compatibility tests."""
-    
+
     def __init__(self, max_depth=3, curvature=1.0, timelike_dim=0, **kwargs):
-        super().__init__(max_depth=max_depth, curvature=curvature, timelike_dim=timelike_dim,
-                         skip_hyperboloid_check=True, **kwargs)
-    
+        super().__init__(
+            max_depth=max_depth, curvature=curvature, timelike_dim=timelike_dim, skip_hyperboloid_check=True, **kwargs
+        )
+
     def fit(self, X, y):
         # For sklearn compatibility tests, we'll skip the hyperboloid check
         # and add a timelike dimension if needed
@@ -71,32 +71,32 @@ class CompatibilityHyperbolicDecisionTreeClassifier(HyperbolicDecisionTreeClassi
         elif X.shape[1] >= 2 and self.timelike_dim >= X.shape[1]:
             # If timelike dimension is invalid, set to 0
             self.timelike_dim = 0
-            
+
         # Make sure first dimension is timelike
-        X_norm = np.sqrt(np.sum(np.delete(X, self.timelike_dim, axis=1)**2, axis=1))
+        X_norm = np.sqrt(np.sum(np.delete(X, self.timelike_dim, axis=1) ** 2, axis=1))
         if self.timelike_dim == 0:
             X[:, 0] = np.sqrt(X_norm**2 + 1.0)
-        
+
         return super().fit(X, y)
 
     def _get_tags(self):
         # Base tags for scikit-learn compatibility
         tags = {
-            'allow_nan': False,
-            'handles_1d_data': False,
-            'requires_positive_X': False,
-            'requires_positive_y': False,
-            'X_types': ['2darray'],
-            'poor_score': False,
-            'no_validation': True,
-            'multioutput': False,
-            '_skip_test': False,
-            'multilabel': False,
-            'non_deterministic': False,
-            'array_api_support': False,
-            '_xfail_checks': {},
-            'pairwise': False,
-            'requires_fit': True
+            "allow_nan": False,
+            "handles_1d_data": False,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "X_types": ["2darray"],
+            "poor_score": False,
+            "no_validation": True,
+            "multioutput": False,
+            "_skip_test": False,
+            "multilabel": False,
+            "non_deterministic": False,
+            "array_api_support": False,
+            "_xfail_checks": {},
+            "pairwise": False,
+            "requires_fit": True,
         }
         return tags
 
@@ -104,11 +104,12 @@ class CompatibilityHyperbolicDecisionTreeClassifier(HyperbolicDecisionTreeClassi
 # Create a modified DecisionTreeRegressor for compatibility tests
 class CompatibilityHyperbolicDecisionTreeRegressor(HyperbolicDecisionTreeRegressor):
     """Modified regressor for sklearn compatibility tests."""
-    
+
     def __init__(self, max_depth=3, curvature=1.0, timelike_dim=0, **kwargs):
-        super().__init__(max_depth=max_depth, curvature=curvature, timelike_dim=timelike_dim,
-                         skip_hyperboloid_check=True, **kwargs)
-    
+        super().__init__(
+            max_depth=max_depth, curvature=curvature, timelike_dim=timelike_dim, skip_hyperboloid_check=True, **kwargs
+        )
+
     def fit(self, X, y):
         # For sklearn compatibility tests, we'll skip the hyperboloid check
         # and add a timelike dimension if needed
@@ -118,32 +119,32 @@ class CompatibilityHyperbolicDecisionTreeRegressor(HyperbolicDecisionTreeRegress
         elif X.shape[1] >= 2 and self.timelike_dim >= X.shape[1]:
             # If timelike dimension is invalid, set to 0
             self.timelike_dim = 0
-            
+
         # Make sure first dimension is timelike
-        X_norm = np.sqrt(np.sum(np.delete(X, self.timelike_dim, axis=1)**2, axis=1))
+        X_norm = np.sqrt(np.sum(np.delete(X, self.timelike_dim, axis=1) ** 2, axis=1))
         if self.timelike_dim == 0:
             X[:, 0] = np.sqrt(X_norm**2 + 1.0)
-        
+
         return super().fit(X, y)
 
     def _get_tags(self):
-        # Base tags for scikit-learn compatibility 
+        # Base tags for scikit-learn compatibility
         tags = {
-            'allow_nan': False,
-            'handles_1d_data': False,
-            'requires_positive_X': False,
-            'requires_positive_y': False,
-            'X_types': ['2darray'],
-            'poor_score': False,
-            'no_validation': True,
-            'multioutput': False,
-            '_skip_test': False,
-            'multilabel': False,
-            'non_deterministic': False,
-            'array_api_support': False,
-            '_xfail_checks': {},
-            'pairwise': False,
-            'requires_fit': True
+            "allow_nan": False,
+            "handles_1d_data": False,
+            "requires_positive_X": False,
+            "requires_positive_y": False,
+            "X_types": ["2darray"],
+            "poor_score": False,
+            "no_validation": True,
+            "multioutput": False,
+            "_skip_test": False,
+            "multilabel": False,
+            "non_deterministic": False,
+            "array_api_support": False,
+            "_xfail_checks": {},
+            "pairwise": False,
+            "requires_fit": True,
         }
         return tags
 
@@ -164,46 +165,42 @@ def test_sklearn_compatible_regressor(estimator, check):
 
 def test_hyperbolic_estimators_in_sklearn_pipeline():
     """Minimal test to ensure the estimators work in a sklearn pipeline."""
-    
+
     # Generate test data
     X, y_class, y_reg = generate_hyperbolic_data(n_samples=100, n_features=5, random_state=42)
-    
+
     # Test classifier in pipeline with actual HyperbolicDecisionTreeClassifier
     # Skip hyperboloid check since we're generating valid data
     # Using the already imported classes from hyperdt, not repetitive import
-    
+
     # Test with real estimators, not just the compatibility ones
-    clf_pipe = Pipeline([
-        ('scaler', StandardScaler()),
-        ('clf', HyperbolicDecisionTreeClassifier(skip_hyperboloid_check=True))
-    ])
+    clf_pipe = Pipeline(
+        [("scaler", StandardScaler()), ("clf", HyperbolicDecisionTreeClassifier(skip_hyperboloid_check=True))]
+    )
     clf_pipe.fit(X, y_class)
     y_pred = clf_pipe.predict(X)
     assert y_pred.shape == y_class.shape, "Classifier prediction shape mismatch"
-    
+
     # Test regressor in pipeline
-    reg_pipe = Pipeline([
-        ('scaler', StandardScaler()),
-        ('reg', HyperbolicDecisionTreeRegressor(skip_hyperboloid_check=True))
-    ])
+    reg_pipe = Pipeline(
+        [("scaler", StandardScaler()), ("reg", HyperbolicDecisionTreeRegressor(skip_hyperboloid_check=True))]
+    )
     reg_pipe.fit(X, y_reg)
     y_pred_reg = reg_pipe.predict(X)
     assert y_pred_reg.shape == y_reg.shape, "Regressor prediction shape mismatch"
-    
+
     print("Hyperbolic estimators work successfully in scikit-learn pipelines")
 
 
 def run_manual_check():
     """Run a subset of estimator checks manually."""
     print("Testing basic pipeline compatibility...")
-    
+
     # Generate test data
     X, y_class, y_reg = generate_hyperbolic_data(n_samples=100, n_features=5, random_state=42)
-    
+
     # Test classifier pipeline
-    pipe = Pipeline([
-        ('clf', HyperbolicDecisionTreeClassifier(skip_hyperboloid_check=True))
-    ])
+    pipe = Pipeline([("clf", HyperbolicDecisionTreeClassifier(skip_hyperboloid_check=True))])
     pipe.fit(X, y_class)
     y_pred = pipe.predict(X)
     print(f"Pipeline prediction shape: {y_pred.shape}")
@@ -218,6 +215,6 @@ if __name__ == "__main__":
         print("All compatibility checks passed!")
     except Exception as e:
         print(f"Some compatibility checks failed (expected): {str(e)[:100]}...")
-    
+
     # Run the manual check
     run_manual_check()

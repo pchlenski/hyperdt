@@ -178,7 +178,7 @@ class HyperbolicRandomForestClassifier(RandomForestClassifier):
         curvature: float = -1,
         skip_hyperboloid_check: bool = False,
         angle_midpoint_method: Literal["hyperbolic", "bisect"] = "hyperbolic",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(tree_type=HyperbolicDecisionTreeClassifier, **kwargs)
 
@@ -203,7 +203,7 @@ class HyperbolicRandomForestRegressor(RandomForestClassifier):
         curvature: float = -1,
         skip_hyperboloid_check: bool = False,
         angle_midpoint_method: Literal["hyperbolic", "bisect"] = "hyperbolic",
-        **kwargs
+        **kwargs,
     ):
         super().__init__(tree_type=HyperbolicDecisionTreeRegressor, **kwargs)
 
