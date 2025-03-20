@@ -46,7 +46,7 @@ def test_decision_tree_classifier():
     X_train, X_test, y_train, y_test = prepare_test_data(task="classification")
 
     # Create and fit model
-    clf = HyperbolicDecisionTreeClassifier(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
+    clf = HyperbolicDecisionTreeClassifier(max_depth=5, timelike_dim=0, validate_input_geometry=False)
     clf.fit(X_train, y_train)
 
     # Make predictions
@@ -71,7 +71,7 @@ def test_decision_tree_regressor():
     X_train, X_test, y_train, y_test = prepare_test_data(task="regression")
 
     # Create and fit model
-    reg = HyperbolicDecisionTreeRegressor(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
+    reg = HyperbolicDecisionTreeRegressor(max_depth=5, timelike_dim=0, validate_input_geometry=False)
     reg.fit(X_train, y_train)
 
     # Make predictions
@@ -93,7 +93,7 @@ def test_random_forest_classifier():
     X_train, X_test, y_train, y_test = prepare_test_data(task="classification")
 
     # Create and fit model with fewer trees for faster testing
-    clf = HyperbolicRandomForestClassifier(n_estimators=10, max_depth=3, timelike_dim=0, skip_hyperboloid_check=True)
+    clf = HyperbolicRandomForestClassifier(n_estimators=10, max_depth=3, timelike_dim=0, validate_input_geometry=False)
     clf.fit(X_train, y_train)
 
     # Make predictions
@@ -118,7 +118,7 @@ def test_random_forest_regressor():
     X_train, X_test, y_train, y_test = prepare_test_data(task="regression")
 
     # Create and fit model with fewer trees for faster testing
-    reg = HyperbolicRandomForestRegressor(n_estimators=10, max_depth=3, timelike_dim=0, skip_hyperboloid_check=True)
+    reg = HyperbolicRandomForestRegressor(n_estimators=10, max_depth=3, timelike_dim=0, validate_input_geometry=False)
     reg.fit(X_train, y_train)
 
     # Make predictions
@@ -141,7 +141,7 @@ def test_xgboost_classifier():
 
     # Create and fit model with fewer trees for faster testing
     clf = HyperbolicXGBoostClassifier(
-        n_estimators=10, max_depth=3, learning_rate=0.1, timelike_dim=0, skip_hyperboloid_check=True
+        n_estimators=10, max_depth=3, learning_rate=0.1, timelike_dim=0, validate_input_geometry=False
     )
     clf.fit(X_train, y_train)
 
@@ -168,7 +168,7 @@ def test_xgboost_regressor():
 
     # Create and fit model with fewer trees for faster testing
     reg = HyperbolicXGBoostRegressor(
-        n_estimators=10, max_depth=3, learning_rate=0.1, timelike_dim=0, skip_hyperboloid_check=True
+        n_estimators=10, max_depth=3, learning_rate=0.1, timelike_dim=0, validate_input_geometry=False
     )
     reg.fit(X_train, y_train)
 

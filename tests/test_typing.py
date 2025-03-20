@@ -41,7 +41,7 @@ def test_hyperbolic_decision_tree(hyperbolic_data):
     X, y_class, _ = hyperbolic_data
 
     # Test base class with default settings (classification)
-    base_tree = HyperbolicDecisionTree(max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True)
+    base_tree = HyperbolicDecisionTree(max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False)
     base_tree.fit(X, y_class)
     y_pred = base_tree.predict(X)
 
@@ -53,7 +53,7 @@ def test_decision_tree_classifier(hyperbolic_data):
     X, y_class, _ = hyperbolic_data
 
     # Test classifier
-    clf = HyperbolicDecisionTreeClassifier(max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True)
+    clf = HyperbolicDecisionTreeClassifier(max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False)
     clf.fit(X, y_class)
     y_pred = clf.predict(X)
     y_proba = clf.predict_proba(X)
@@ -68,7 +68,7 @@ def test_decision_tree_regressor(hyperbolic_data):
     X, _, y_reg = hyperbolic_data
 
     # Test regressor
-    reg = HyperbolicDecisionTreeRegressor(max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True)
+    reg = HyperbolicDecisionTreeRegressor(max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False)
     reg.fit(X, y_reg)
     y_pred_reg = reg.predict(X)
 
@@ -82,7 +82,7 @@ def test_random_forest_classifier(hyperbolic_data):
 
     # Test random forest
     rf_clf = HyperbolicRandomForestClassifier(
-        n_estimators=3, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True
+        n_estimators=3, max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False
     )
     rf_clf.fit(X, y_class)
     rf_y_pred = rf_clf.predict(X)
@@ -99,7 +99,7 @@ def test_random_forest_regressor(hyperbolic_data):
 
     # Test random forest regressor
     rf_reg = HyperbolicRandomForestRegressor(
-        n_estimators=3, max_depth=3, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True
+        n_estimators=3, max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False
     )
     rf_reg.fit(X, y_reg)
     rf_y_pred_reg = rf_reg.predict(X)
@@ -114,7 +114,7 @@ def test_xgboost_classifier(hyperbolic_data):
 
     # Test XGBoost
     xgb_clf = HyperbolicXGBoostClassifier(
-        n_estimators=3, max_depth=3, learning_rate=0.1, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True
+        n_estimators=3, max_depth=3, learning_rate=0.1, curvature=1.0, timelike_dim=0, validate_input_geometry=False
     )
     xgb_clf.fit(X, y_class)
     xgb_y_pred = xgb_clf.predict(X)
@@ -131,7 +131,7 @@ def test_xgboost_regressor(hyperbolic_data):
 
     # Test XGBoost regressor
     xgb_reg = HyperbolicXGBoostRegressor(
-        n_estimators=3, max_depth=3, learning_rate=0.1, curvature=1.0, timelike_dim=0, skip_hyperboloid_check=True
+        n_estimators=3, max_depth=3, learning_rate=0.1, curvature=1.0, timelike_dim=0, validate_input_geometry=False
     )
     xgb_reg.fit(X, y_reg)
     xgb_y_pred_reg = xgb_reg.predict(X)

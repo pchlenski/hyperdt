@@ -18,15 +18,17 @@ class HyperbolicDecisionTree(BaseEstimator):
         backend: Literal["sklearn_dt", "sklearn_rf", "xgboost"] = "sklearn_dt",
         task: Literal["classification", "regression"] = "classification",
         curvature: float = 1.0,
-        skip_hyperboloid_check: bool = True,
         timelike_dim: int = 0,
+        validate_input_geometry: bool = True,
+        input_geometry: Literal["hyperboloid", "klein", "poincare"] = "hyperboloid",
         **kwargs: Any,
     ):
         self.backend = backend
         self.task = task
         self.curvature = curvature
         self.timelike_dim = timelike_dim
-        self.skip_hyperboloid_check = skip_hyperboloid_check
+        self.validate_input_geometry = validate_input_geometry
+        self.input_geometry = input_geometry
         self.kwargs = kwargs
 
         # Import the appropriate estimator based on task and backend
@@ -66,13 +68,35 @@ class HyperbolicDecisionTree(BaseEstimator):
         """Validate the input data: ensure points lie on a hyperboloid."""
         assert np.all(
             np.linalg.norm(X, axis=1) <= 1 / self.curvature**0.5
-        ), "Points must lie on a hyperboloid: norms must be <= than 1/sqrt(K)."
+        ), "Points must lie inside a disk: norms must be <= than 1/sqrt(K)."
+
+    def _validate_poincare(self, X: ArrayLike) -> None:
+        """Validate the input data: ensure points lie on a hyperboloid."""
+        assert np.all(
+            np.linalg.norm(X, axis=1) <= 1 / self.curvature**0.5
+        ), "Points must lie inside a disk: norms must be <= than 1/sqrt(K)."
 
     def _preprocess(self, X: ArrayLike) -> np.ndarray:
         """Preprocess the input data: convert to Klein coordinates."""
-        X_spacelike = np.delete(X, self.timelike_dim, axis=1)
-        X_timelike = X[:, self.timelike_dim]
-        return X_spacelike / X_timelike.reshape(-1, 1)
+        if self.input_geometry == "hyperboloid":
+            if self.validate_input_geometry:
+                self._validate_hyperboloid(X)
+            X_spacelike = np.delete(X, self.timelike_dim, axis=1)
+            X_timelike = X[:, self.timelike_dim]
+            X_klein = X_spacelike / X_timelike.reshape(-1, 1)
+        elif self.input_geometry == "klein":
+            if self.validate_input_geometry:
+                self._validate_klein(X)
+            X_klein = X
+        elif self.input_geometry == "poincare":
+            if self.validate_input_geometry:
+                self._validate_poincare(X)
+            coefs = 1 / (1 + (1 - self.curvature * np.linalg.norm(X, axis=1) ** 2) ** 0.5)
+            X_klein = X * coefs.reshape(-1, 1)
+        else:
+            raise ValueError(f"Unknown input geometry: {self.input_geometry}.")
+        self._validate_klein(X_klein)
+        return X_klein
 
     def _einstein_midpoint(self, u: float, v: float) -> float:
         """Calculate the Einstein midpoint between two values."""
@@ -127,7 +151,7 @@ class HyperbolicDecisionTree(BaseEstimator):
             # This gets overwritten by the XGBoost implementation
             pass
 
-    def fit(self, X: ArrayLike, y: ArrayLike, preprocess: bool = True) -> "HyperbolicDecisionTree":
+    def fit(self, X: ArrayLike, y: ArrayLike) -> "HyperbolicDecisionTree":
         """
         Fit the hyperbolic decision tree.
 
@@ -137,67 +161,45 @@ class HyperbolicDecisionTree(BaseEstimator):
             The input data.
         y: ArrayLike
             The target data.
-        preprocess: bool (default: True)
-            Whether to preprocess the data by converting from hyperboloid to Klein coordinates.
 
         Returns:
         --------
         self: HyperbolicDecisionTree
             The fitted hyperbolic decision tree predictor.
         """
-        if preprocess:
-            self._validate_hyperboloid(X)
-            X_klein = self._preprocess(X)
-        else:
-            self._validate_klein(X)
-            X_klein = X
+        X_klein = self._preprocess(X)
         self.estimator_.fit(X_klein, y)
-        if preprocess:
-            self._postprocess(X_klein)
+        self._postprocess(X_klein)
         return self
 
-    def predict(self, X: ArrayLike, preprocess: bool = True) -> np.ndarray:
+    def predict(self, X: ArrayLike) -> np.ndarray:
         """Predict the output for the input data.
 
         Args:
         -----
         X: ArrayLike
             The input data.
-        preprocess: bool (default: True)
-            Whether to preprocess the data by converting from hyperboloid to Klein coordinates.
 
         Returns:
         --------
         y_pred: np.ndarray
             The predicted output.
         """
-        if preprocess:
-            self._validate_hyperboloid(X)
-            X_klein = self._preprocess(X)
-        else:
-            self._validate_klein(X)
-            X_klein = X
+        X_klein = self._preprocess(X)
         return self.estimator_.predict(X_klein)
 
-    def predict_proba(self, X: ArrayLike, preprocess: bool = True) -> np.ndarray:
+    def predict_proba(self, X: ArrayLike) -> np.ndarray:
         """Predict the output for the input data.
 
         Args:
         -----
         X: ArrayLike
             The input data.
-        preprocess: bool (default: True)
-            Whether to preprocess the data by converting from hyperboloid to Klein coordinates.
 
         Returns:
         --------
         y_pred: np.ndarray
             The predicted output.
         """
-        if preprocess:
-            self._validate_hyperboloid(X)
-            X_klein = self._preprocess(X)
-        else:
-            self._validate_klein(X)
-            X_klein = X
+        X_klein = self._preprocess(X)
         return self.estimator_.predict_proba(X_klein)

@@ -103,7 +103,7 @@ def test_prediction_agreement(depths=[1, 3, 5, 10, None]):
 
             # Create and fit models
             orig_tree = OriginalHDTC(max_depth=depth, timelike_dim=0, skip_hyperboloid_check=True)
-            faster_tree = FasterHDTC(max_depth=depth, timelike_dim=0, skip_hyperboloid_check=True)
+            faster_tree = FasterHDTC(max_depth=depth, timelike_dim=0, validate_input_geometry=False)
 
             # Fit trees
             orig_tree.fit(X_train, y_train)
@@ -177,7 +177,7 @@ def test_decision_boundary_agreement():
 
     # Create and fit models
     orig_tree = OriginalHDTC(max_depth=depth, timelike_dim=0, skip_hyperboloid_check=True)
-    faster_tree = FasterHDTC(max_depth=depth, timelike_dim=0, skip_hyperboloid_check=True)
+    faster_tree = FasterHDTC(max_depth=depth, timelike_dim=0, validate_input_geometry=False)
 
     orig_tree.fit(X, y)
     faster_tree.fit(X, y)
@@ -216,7 +216,7 @@ def test_information_gain_agreement():
 
     # Create models
     orig_tree = OriginalHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
-    faster_tree = FasterHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
+    faster_tree = FasterHDTC(max_depth=1, timelike_dim=0, validate_input_geometry=False)
 
     # Fit both models
     orig_tree.fit(X, y)
@@ -246,7 +246,7 @@ def test_higher_dimensions():
 
         # Create models
         orig_tree = OriginalHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
-        faster_tree = FasterHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
+        faster_tree = FasterHDTC(max_depth=5, timelike_dim=0, validate_input_geometry=False)
 
         # Fit models
         orig_tree.fit(X, y)
@@ -287,7 +287,7 @@ def test_baseline_performance():
     orig_time = time.time() - start
 
     # Test faster implementation
-    faster_tree = FasterHDTC(max_depth=5, timelike_dim=0, skip_hyperboloid_check=True)
+    faster_tree = FasterHDTC(max_depth=5, timelike_dim=0, validate_input_geometry=False)
 
     start = time.time()
     faster_tree.fit(X, y)
@@ -317,7 +317,7 @@ def test_numerical_precision():
 
     # Create and fit simple trees
     orig_tree = OriginalHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
-    faster_tree = FasterHDTC(max_depth=1, timelike_dim=0, skip_hyperboloid_check=True)
+    faster_tree = FasterHDTC(max_depth=1, timelike_dim=0, validate_input_geometry=False)
 
     orig_tree.fit(X, y)
     faster_tree.fit(X, y)
