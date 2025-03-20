@@ -5,10 +5,11 @@ This module provides XGBoost classifiers and regressors that operate
 natively in hyperbolic space.
 """
 
-from typing import Any
-import tempfile
-import os
 import json
+import os
+import tempfile
+from typing import Any
+
 import numpy as np
 from sklearn.base import ClassifierMixin, RegressorMixin
 

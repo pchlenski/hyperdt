@@ -12,10 +12,9 @@ from hyperdt import (
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
-    HyperbolicXGBoostClassifier,
-    HyperbolicXGBoostRegressor,
 )
 from hyperdt.toy_data import wrapped_normal_mixture
+from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
 
 
 # Prepare test data

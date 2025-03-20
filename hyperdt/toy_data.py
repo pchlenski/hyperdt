@@ -1,13 +1,13 @@
 """Toy data for hyperboloid classification"""
 
-from typing import Tuple, Optional
+from typing import Optional, Tuple
 
-import numpy as np
-from geomstats.geometry.hyperboloid import Hyperboloid
+import geomstats.algebra_utils as utils
 
 # Need for bad_points:
 import geomstats.backend as gs
-import geomstats.algebra_utils as utils
+import numpy as np
+from geomstats.geometry.hyperboloid import Hyperboloid
 
 
 def bad_points(points: np.ndarray, base_points: np.ndarray, manifold: Hyperboloid) -> np.ndarray:

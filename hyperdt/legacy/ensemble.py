@@ -1,20 +1,17 @@
 """Hyperbolic random forest"""
 
-from typing import Tuple, Literal, Type, Optional
+from typing import Literal, Optional, Tuple, Type
 
 import numpy as np
-from scipy import stats
-
-from tqdm import tqdm
-
 from joblib import Parallel, delayed
-
+from scipy import stats
 from sklearn.base import BaseEstimator, ClassifierMixin
+from tqdm import tqdm
 
 from .tree import (
     DecisionTreeClassifier,
-    HyperbolicDecisionTreeClassifier,
     DecisionTreeRegressor,
+    HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
 )
 

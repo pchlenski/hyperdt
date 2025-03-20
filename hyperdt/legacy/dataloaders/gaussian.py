@@ -1,19 +1,20 @@
+import sys
+
 import numpy as np
 import torch
-
 from geomstats.geometry.hyperbolic import Hyperbolic
 from sklearn.model_selection import train_test_split
 
-import sys
-
 sys.path.append("..")
-from hyperdt.toy_data import wrapped_normal_mixture
-from hyperdt.legacy.conversions import convert
+import math
+
+import geomstats.algebra_utils as utils
 
 # Need for bad_points:
 import geomstats.backend as gs
-import geomstats.algebra_utils as utils
-import math
+
+from hyperdt.legacy.conversions import convert
+from hyperdt.toy_data import wrapped_normal_mixture
 
 
 def bad_points(points, base_points, manifold):

@@ -1,21 +1,18 @@
 # Let's write some code to generate a yml file for settings
 
-import yaml
 import os
-
-from time import time, sleep
+from time import sleep, time
 
 import numpy as np
 import pandas as pd
-
+import yaml
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-
-from src.hyperdt.tree import HyperbolicDecisionTreeClassifier
-from src.hyperdt.ensemble import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
+from src.hyperdt.ensemble import HyperbolicRandomForestClassifier
+from src.hyperdt.tree import HyperbolicDecisionTreeClassifier
 
 # Loop controls:
 # datasets = ["gaussian", "neuroseed", "polblogs_hypll"]
@@ -47,15 +44,15 @@ def evaluate_hdt():
     t0 = time()
     print(f"Using loader from file: {params['dataset_file']}")
     if params["dataset_file"] == "datasets.gaussian":
-        from HoroRF.datasets.gaussian import get_training_data, get_testing_data
+        from HoroRF.datasets.gaussian import get_testing_data, get_training_data
     elif params["dataset_file"] == "datasets.neuroseed":
-        from HoroRF.datasets.neuroseed import get_training_data, get_testing_data
+        from HoroRF.datasets.neuroseed import get_testing_data, get_training_data
     elif params["dataset_file"] == "datasets.polblogs_geomstats":
-        from HoroRF.datasets.polblogs_geomstats import get_training_data, get_testing_data
+        from HoroRF.datasets.polblogs_geomstats import get_testing_data, get_training_data
     elif params["dataset_file"] == "datasets.polblogs_hypll":
-        from HoroRF.datasets.polblogs_hypll import get_training_data, get_testing_data
+        from HoroRF.datasets.polblogs_hypll import get_testing_data, get_training_data
     elif params["dataset_file"] == "datasets.binary_wordnet":
-        from HoroRF.datasets.binary_wordnet import get_training_data, get_testing_data
+        from HoroRF.datasets.binary_wordnet import get_testing_data, get_training_data
 
     # Get data
     X_train, y_train = get_training_data(

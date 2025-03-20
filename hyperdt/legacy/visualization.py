@@ -1,13 +1,11 @@
 """Utilities for visualizing hyperbolic decision trees."""
 
-from typing import List, Tuple, Union, Literal, Optional
+from typing import List, Literal, Optional, Tuple, Union
 
-
-import numpy as np
 import matplotlib.pyplot as plt
-
-from scipy.interpolate import interp1d
+import numpy as np
 from matplotlib.lines import Line2D
+from scipy.interpolate import interp1d
 
 from .conversions import convert
 

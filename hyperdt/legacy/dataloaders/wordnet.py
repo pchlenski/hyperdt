@@ -1,8 +1,8 @@
+import sys
+
 import numpy as np
 import torch
 from sklearn.model_selection import train_test_split
-
-import sys
 
 sys.path.append("..")
 from hyperdt.legacy.conversions import convert

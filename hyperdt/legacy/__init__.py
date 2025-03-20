@@ -7,13 +7,13 @@ and other legacy algorithms that may have different dependencies.
 
 try:
     # Import core tree components
-    from .tree import HyperbolicDecisionTreeClassifier, HyperbolicDecisionTreeRegressor
+    from .conversions import *
+    from .ensemble import *
 
     # Import utility modules if available
     from .hyperbolic_trig import *
-    from .conversions import *
+    from .tree import HyperbolicDecisionTreeClassifier, HyperbolicDecisionTreeRegressor
     from .visualization import *
-    from .ensemble import *
 
     # Mark as available
     LEGACY_AVAILABLE = True

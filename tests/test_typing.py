@@ -3,8 +3,8 @@ Test typing annotations for the HyperDT library.
 This file contains tests to check that the interfaces work as expected.
 """
 
-import pytest
 import numpy as np
+import pytest
 
 from hyperdt import (
     HyperbolicDecisionTree,
@@ -12,10 +12,9 @@ from hyperdt import (
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
-    HyperbolicXGBoostClassifier,
-    HyperbolicXGBoostRegressor,
 )
 from hyperdt.toy_data import wrapped_normal_mixture
+from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
 
 
 # Create a fixture for the data

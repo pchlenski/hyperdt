@@ -1,10 +1,9 @@
 """Hyperbolic decision tree model"""
 
-from typing import Tuple, Union, Literal, Optional
-from numpy.typing import NDArray
+from typing import Literal, Optional, Tuple, Union
 
 import numpy as np
-
+from numpy.typing import NDArray
 from sklearn.base import BaseEstimator, ClassifierMixin
 
 from .hyperbolic_trig import get_candidates

@@ -10,21 +10,21 @@ Legacy implementations that use geomstats are available in the legacy submodule.
 
 # Import base and core implementations
 from ._base import HyperbolicDecisionTree
-from .tree import (
-    HyperbolicDecisionTreeClassifier,
-    HyperbolicDecisionTreeRegressor,
-)
 from .ensemble import (
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
+)
+from .tree import (
+    HyperbolicDecisionTreeClassifier,
+    HyperbolicDecisionTreeRegressor,
 )
 
 # Check if XGBoost is available and import optional XGBoost implementations
 try:
     from .xgboost import (
+        XGBOOST_AVAILABLE,
         HyperbolicXGBoostClassifier,
         HyperbolicXGBoostRegressor,
-        XGBOOST_AVAILABLE,
     )
 except ImportError:
     XGBOOST_AVAILABLE = False

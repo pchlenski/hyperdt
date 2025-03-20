@@ -1,7 +1,7 @@
 import anndata
 import numpy as np
-from sklearn.model_selection import train_test_split
 import torch
+from sklearn.model_selection import train_test_split
 
 
 def _get(seed, dimension, num_samples, convert_to_poincare=True, **kwargs):

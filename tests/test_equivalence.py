@@ -11,9 +11,10 @@ This test suite verifies key mathematical properties and prediction equivalence:
 Visual comparisons and benchmarks have been moved to notebooks/visualization_equivalence.ipynb
 """
 
+import time
+
 import numpy as np
 from sklearn.model_selection import train_test_split
-import time
 
 # Import the faster implementation
 from hyperdt import HyperbolicDecisionTreeClassifier as FasterHDTC

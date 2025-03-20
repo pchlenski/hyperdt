@@ -1,23 +1,19 @@
 # Let's write some code to generate a yml file for settings
 
-import yaml
 import os
-
-from time import time, sleep
+from time import sleep, time
 
 import numpy as np
 import pandas as pd
-
+import yaml
+from HoroRF.datasets.gaussian import get_testing_data, get_training_data
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import f1_score
 from sklearn.model_selection import KFold
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-
-from src.hyperdt.tree import HyperbolicDecisionTreeClassifier
-from src.hyperdt.ensemble import HyperbolicRandomForestClassifier
 from src.hyperdt.conversions import convert
-
-from HoroRF.datasets.gaussian import get_training_data, get_testing_data
+from src.hyperdt.ensemble import HyperbolicRandomForestClassifier
+from src.hyperdt.tree import HyperbolicDecisionTreeClassifier
 
 # Loop controls:
 dataset = "gaussian"
