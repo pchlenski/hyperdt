@@ -118,12 +118,14 @@ class HyperbolicDecisionTree(BaseEstimator):
         if self.backend == "sklearn_dt":
             self._fix_node_recursive(self.estimator_, 0, X_klein)
         elif self.backend == "sklearn_rf":
-            for tree in self.estimator_.estimators_:
-                self._fix_node_recursive(tree, 0, X_klein)
+            rf = self.estimator_
+            for tree_idx, tree in enumerate(rf.estimators_):
+                # Restrict X to the points that were used to train this tree
+                X_klein_tree = X_klein[rf.estimators_samples_[tree_idx]]
+                self._fix_node_recursive(tree, 0, X_klein_tree)
         elif self.backend == "xgboost":
-            raise NotImplementedError("XGBoost does not support postprocessing yet.")
-            # for tree in self.estimator.get_booster().get_dump():
-            #     self._fix_node_recursive(tree, 0, X_klein, np.arange(len(X_klein)))
+            # This gets overwritten by the XGBoost implementation
+            pass
 
     def fit(self, X: ArrayLike, y: ArrayLike, preprocess: bool = True) -> "HyperbolicDecisionTree":
         """

@@ -1,4 +1,5 @@
-"""HyperDT - Fast Hyperboloid Decision Tree Algorithms.
+"""
+HyperDT - Fast Hyperboloid Decision Tree Algorithms.
 
 This package implements decision trees that operate natively in hyperbolic space.
 It provides a scikit-learn compatible interface and supports multiple backends
