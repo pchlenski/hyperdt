@@ -12,16 +12,17 @@ from sklearn.base import BaseEstimator
 
 
 class HyperbolicDecisionTree(BaseEstimator):
-    """Base class for Klein wrapper"""
+    """Base class for Klein wrapper classes."""
 
     def __init__(
         self,
-        backend: Literal["sklearn_dt", "sklearn_rf", "xgboost"] = "sklearn_dt",
+        backend: Literal["sklearn_dt", "sklearn_rf", "xgboost", "hhcart", "co2"] = "sklearn_dt",
         task: Literal["classification", "regression"] = "classification",
         curvature: float = 1.0,
         timelike_dim: int = 0,
         validate_input_geometry: bool = True,
         input_geometry: Literal["hyperboloid", "klein", "poincare"] = "hyperboloid",
+        midpoint_method: Literal["einstein", "naive", "zero"] = "einstein",
         **kwargs: Any,
     ):
         self.backend = backend
@@ -30,6 +31,7 @@ class HyperbolicDecisionTree(BaseEstimator):
         self.timelike_dim = timelike_dim
         self.validate_input_geometry = validate_input_geometry
         self.input_geometry = input_geometry
+        self.midpoint_method = midpoint_method
         self.kwargs = kwargs
 
         # Import the appropriate estimator based on task and backend
@@ -37,9 +39,13 @@ class HyperbolicDecisionTree(BaseEstimator):
             ("classification", "sklearn_dt"): ("sklearn.tree", "DecisionTreeClassifier"),
             ("classification", "sklearn_rf"): ("sklearn.ensemble", "RandomForestClassifier"),
             ("classification", "xgboost"): ("xgboost", "XGBClassifier"),
+            ("classification", "hhcart"): ("scikit_obliquetree.HHCART", "HouseHolderCART"),
+            ("classification", "co2"): ("scikit_obliquetree.CO2", "ContinuouslyOptimizedObliqueRegressionTree"),
             ("regression", "sklearn_dt"): ("sklearn.tree", "DecisionTreeRegressor"),
             ("regression", "sklearn_rf"): ("sklearn.ensemble", "RandomForestRegressor"),
             ("regression", "xgboost"): ("xgboost", "XGBRegressor"),
+            ("regression", "hhcart"): ("scikit_obliquetree.HHCART", "HouseHolderCART"),
+            ("regression", "co2"): ("scikit_obliquetree.CO2", "ContinuouslyOptimizedObliqueRegressionTree"),
         }
         if (self.task, self.backend) not in estimator_mapping:
             raise ValueError(f"Unknown task: {self.task} and/or backend: {self.backend}.")
@@ -99,18 +105,24 @@ class HyperbolicDecisionTree(BaseEstimator):
         self._validate_klein(X_klein)
         return X_klein
 
-    def _einstein_midpoint(self, u: float, v: float) -> float:
-        """Calculate the Einstein midpoint between two values."""
+    def _midpoint(self, u: float, v: float) -> float:
+        """Calculate the correct midpoint between two values."""
+        if self.midpoint_method == "einstein":
+            # Get the Lorentz factor for each value
+            gamma_u = 1 / np.sqrt(1 - u**2 / self.curvature)
+            gamma_v = 1 / np.sqrt(1 - v**2 / self.curvature)
 
-        # Get the Lorentz factor for each value
-        gamma_u = 1 / np.sqrt(1 - u**2 / self.curvature)
-        gamma_v = 1 / np.sqrt(1 - v**2 / self.curvature)
+            # Calculate the Einstein midpoint
+            numerator = gamma_u * u + gamma_v * v
+            denominator = gamma_u + gamma_v
 
-        # Calculate the Einstein midpoint
-        numerator = gamma_u * u + gamma_v * v
-        denominator = gamma_u + gamma_v
-
-        return numerator / denominator
+            return numerator / denominator
+        elif self.midpoint_method == "naive":
+            return (u + v) / 2
+        elif self.midpoint_method == "zero":
+            return 0
+        else:
+            raise ValueError(f"Unknown midpoint method: {self.midpoint_method}.")
 
     def _fix_node_recursive(self, estimator: Any, node_id: int, X_klein: np.ndarray) -> None:
         """Fix the tree to use Einstein midpoints."""
@@ -132,7 +144,7 @@ class HyperbolicDecisionTree(BaseEstimator):
         # Adjust this node's threshold using Einstein midpoints instead of naive averages as in base sklearn
         left_max = np.max(feature_values[left_mask])  # Closest point from left
         right_min = np.min(feature_values[right_mask])  # Closest point from right
-        estimator.tree_.threshold[node_id] = self._einstein_midpoint(left_max, right_min)
+        estimator.tree_.threshold[node_id] = self._midpoint(left_max, right_min)
 
         # Recurse
         self._fix_node_recursive(estimator, estimator.tree_.children_left[node_id], X_klein[left_mask])
@@ -150,6 +162,9 @@ class HyperbolicDecisionTree(BaseEstimator):
                 self._fix_node_recursive(tree, 0, X_klein_tree)
         elif self.backend == "xgboost":
             # This gets overwritten by the XGBoost implementation
+            pass
+        elif self.backend == "hhcart":
+            # This gets overwritten by the HouseHolderCART implementation
             pass
 
     def fit(self, X: ArrayLike, y: ArrayLike) -> "HyperbolicDecisionTree":

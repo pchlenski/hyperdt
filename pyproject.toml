@@ -53,13 +53,15 @@ test = [
 xgboost = [
     "xgboost>=1.5.0",
 ]
-legacy = [
-    # Dependencies specifically for the legacy tree.py implementation
-    "geomstats>=2.5.0",
+legacy = []
+oblique = [
+    "scikit-obliquetree>=0.1.0",
+    "numba>=0.56.0",
 ]
 all = [
     "xgboost>=1.5.0",
-    "geomstats>=2.5.0",
+    "scikit-obliquetree>=0.1.0",
+    "numba>=0.56.0",
 ]
 
 [project.urls]

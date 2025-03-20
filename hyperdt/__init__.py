@@ -35,6 +35,18 @@ try:
 except ImportError:
     LEGACY_AVAILABLE = False
 
+# Check if scikit-obliquetree is available and import oblique implementations
+try:
+    from .oblique import (
+        OBLIQUE_AVAILABLE,
+        HyperbolicContinuouslyOptimizedClassifier,
+        HyperbolicContinuouslyOptimizedRegressor,
+        HyperbolicHouseHolderClassifier,
+        HyperbolicHouseHolderRegressor,
+    )
+except ImportError:
+    OBLIQUE_AVAILABLE = False
+
 __all__ = [
     "HyperbolicDecisionTree",
     "HyperbolicDecisionTreeClassifier",
@@ -43,8 +55,20 @@ __all__ = [
     "HyperbolicRandomForestRegressor",
     "XGBOOST_AVAILABLE",
     "LEGACY_AVAILABLE",
+    "OBLIQUE_AVAILABLE",
 ]
 
 # Add XGBoost classes to __all__ if available
 if XGBOOST_AVAILABLE:
     __all__.extend(["HyperbolicXGBoostClassifier", "HyperbolicXGBoostRegressor"])
+
+# Add Oblique decision tree classes to __all__ if available
+if OBLIQUE_AVAILABLE:
+    __all__.extend(
+        [
+            "HyperbolicHouseHolderClassifier",
+            "HyperbolicHouseHolderRegressor",
+            "HyperbolicContinuouslyOptimizedClassifier",
+            "HyperbolicContinuouslyOptimizedRegressor",
+        ]
+    )

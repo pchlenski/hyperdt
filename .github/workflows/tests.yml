@@ -50,7 +50,7 @@ jobs:
       run: |
         # Check core modules which have proper type annotations
         # Disable error for untyped imports
-        mypy --ignore-missing-imports --no-warn-return-any --follow-imports=skip hyperdt/_base.py hyperdt/tree.py hyperdt/ensemble.py hyperdt/xgboost.py
+        mypy --ignore-missing-imports --no-warn-return-any --follow-imports=skip hyperdt/_base.py hyperdt/tree.py hyperdt/ensemble.py hyperdt/xgboost.py hyperdt/oblique.py
       continue-on-error: true  # Allow mypy to fail but continue the workflow
     - name: Run tests
       run: |

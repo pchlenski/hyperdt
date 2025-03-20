@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from hyperdt import (
+    OBLIQUE_AVAILABLE,
     HyperbolicDecisionTree,
     HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
@@ -15,6 +16,15 @@ from hyperdt import (
 )
 from hyperdt.toy_data import wrapped_normal_mixture
 from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
+
+# Import oblique models if available
+if OBLIQUE_AVAILABLE:
+    from hyperdt import (
+        HyperbolicContinuouslyOptimizedClassifier,
+        HyperbolicContinuouslyOptimizedRegressor,
+        HyperbolicHouseHolderClassifier,
+        HyperbolicHouseHolderRegressor,
+    )
 
 
 # Create a fixture for the data
@@ -137,3 +147,62 @@ def test_xgboost_regressor(hyperbolic_data):
 
     assert xgb_y_pred_reg.shape == y_reg.shape
     assert hasattr(xgb_reg.estimator_, "feature_importances_")
+
+
+@pytest.mark.skipif(not OBLIQUE_AVAILABLE, reason="scikit-obliquetree not installed")
+def test_householder_classifier(hyperbolic_data):
+    """Test that HyperbolicHouseHolderClassifier works."""
+    X, y_class, _ = hyperbolic_data
+
+    # Test HouseHolder classifier
+    hh_clf = HyperbolicHouseHolderClassifier(max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False)
+    hh_clf.fit(X, y_class)
+    hh_y_pred = hh_clf.predict(X)
+
+    assert hh_y_pred.shape == y_class.shape
+
+
+@pytest.mark.skipif(not OBLIQUE_AVAILABLE, reason="scikit-obliquetree not installed")
+def test_householder_regressor(hyperbolic_data):
+    """Test that HyperbolicHouseHolderRegressor works."""
+    X, _, y_reg = hyperbolic_data
+
+    # Test HouseHolder regressor
+    hh_reg = HyperbolicHouseHolderRegressor(max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False)
+    hh_reg.fit(X, y_reg)
+    hh_y_pred_reg = hh_reg.predict(X)
+
+    assert hh_y_pred_reg.shape == y_reg.shape
+
+
+@pytest.mark.skipif(not OBLIQUE_AVAILABLE, reason="scikit-obliquetree not installed")
+def test_co2_classifier(hyperbolic_data):
+    """Test that HyperbolicContinuouslyOptimizedClassifier works."""
+    X, y_class, _ = hyperbolic_data
+
+    # We need binary classification for CO2
+    y_binary = (y_class > 0).astype(int)
+
+    # Test CO2 classifier
+    co2_clf = HyperbolicContinuouslyOptimizedClassifier(
+        max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False
+    )
+    co2_clf.fit(X, y_binary)
+    co2_y_pred = co2_clf.predict(X)
+
+    assert co2_y_pred.shape == y_binary.shape
+
+
+@pytest.mark.skipif(not OBLIQUE_AVAILABLE, reason="scikit-obliquetree not installed")
+def test_co2_regressor(hyperbolic_data):
+    """Test that HyperbolicContinuouslyOptimizedRegressor works."""
+    X, _, y_reg = hyperbolic_data
+
+    # Test CO2 regressor
+    co2_reg = HyperbolicContinuouslyOptimizedRegressor(
+        max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False
+    )
+    co2_reg.fit(X, y_reg)
+    co2_y_pred_reg = co2_reg.predict(X)
+
+    assert co2_y_pred_reg.shape == y_reg.shape

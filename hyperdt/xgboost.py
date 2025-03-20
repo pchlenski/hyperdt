@@ -8,6 +8,7 @@ natively in hyperbolic space.
 import json
 import os
 import tempfile
+import warnings
 from typing import Any
 
 import numpy as np
@@ -19,11 +20,21 @@ from ._base import HyperbolicDecisionTree
 class HyperbolicXGBoost(HyperbolicDecisionTree):
     """Wrapper around XGBoost trees to make them more amenable to hyperbolic space."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, override_subsample: bool = True, *args, **kwargs):
         # Prevent bootstrap resampling, which is not supported currently.
-        if "subsample" in kwargs:
-            print("Warning: subsample is not supported currently. Setting to 1.0.")
-        kwargs["subsample"] = 1.0
+        self.override_subsample = override_subsample
+        if self.override_subsample and "subsample" in kwargs:
+            warnings.warn(
+                "Warning: subsample is not supported currently. Setting to 1.0.",
+                UserWarning,
+            )
+            kwargs["subsample"] = 1.0
+        elif not self.override_subsample and "subsample" in kwargs:
+            warnings.warn(
+                "Warning: subsample is not supported currently. Postprocessing will use entire dataset. Your results may be suboptimal.",
+                UserWarning,
+            )
+            kwargs["subsample"] = 1.0
         super().__init__(backend="xgboost", *args, **kwargs)
 
     def _fix_node_recursive(self, tree: Any, node_id: int, X_klein: np.ndarray) -> None:
@@ -53,7 +64,7 @@ class HyperbolicXGBoost(HyperbolicDecisionTree):
         # Adjust this node's threshold using Einstein midpoints instead of naive averages as in base sklearn
         left_max = np.max(feature_values[left_mask])  # Closest point from left
         right_min = np.min(feature_values[right_mask])  # Closest point from right
-        tree["split_conditions"][node_id] = self._einstein_midpoint(left_max, right_min)
+        tree["split_conditions"][node_id] = self._midpoint(left_max, right_min)
 
         # Recurse
         self._fix_node_recursive(tree, tree["left_children"][node_id], X_klein[left_mask])
