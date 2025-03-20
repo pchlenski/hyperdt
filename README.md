@@ -61,26 +61,27 @@ A basic tutorial demonstrating key HyperDT functionality is available in `notebo
 
 The hyperDT package is structured as follows:
 
-- `hyperdt/_base.py`: Base classes for hyperbolic decision trees
-- `hyperdt/tree.py`: HyperbolicDecisionTreeClassifier and HyperbolicDecisionTreeRegressor 
-- `hyperdt/ensemble.py`: HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
-- `hyperdt/_xgboost.py`: XGBoost integration (requires `pip install hyperdt[xgboost]`)
-- `hyperdt/legacy/`: Original implementation (requires `pip install hyperdt[legacy]`)
-  - `hyperdt/legacy/dataloaders`: Functions for loading benchmarking data into HoroRF
-  - `hyperdt/legacy/conversions`: Convert between hyperboloid, Poincare, and Beltrami-Klein models
-  - `hyperdt/legacy/ensemble`: Legacy HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
-  - `hyperdt/legacy/hyperbolic_trig`: Angular processing and midpoint calculations in the hyperboloid model
-  - `hyperdt/legacy/tree`: Legacy HyperbolicDecisionTreeClassifier and HyperbolicDecisionTreeRegressor, plus base classes
-  - `hyperdt/legacy/visualization`: Code to visualize decision boundaries on the Poincare disk
-- `hyperdt/toy_data.py`: Utilities for generating synthetic hyperbolic datasets
+- `hyperdt`
+  - `_base.py`: Base classes for hyperbolic decision trees
+  - `toy_data.py`: Utilities for generating synthetic hyperbolic datasets
+  - `tree.py`: HyperbolicDecisionTreeClassifier and HyperbolicDecisionTreeRegressor 
+  - `ensemble.py`: HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
+  - `oblique.py`: Oblique decision trees (requires `pip install hyperdt[oblique]`)
+  - `xgboost.py`: XGBoost integration (requires `pip install hyperdt[xgboost]`)
+  - `legacy/`: Original implementation (requires `pip install hyperdt[legacy]`)
+    - `dataloaders`: Functions for loading benchmarking data into HoroRF
+    - `conversions`: Convert between hyperboloid, Poincare, and Beltrami-Klein models
+    - `ensemble`: Legacy HyperbolicRandomForestClassifier and HyperbolicRandomForestRegressor
+    - `hyperbolic_trig`: Angular processing and midpoint calculations in the hyperboloid model
+    - `tree`: Legacy HyperbolicDecisionTreeClassifier and HyperbolicDecisionTreeRegressor, plus base classes
+    - `visualization`: Code to visualize decision boundaries on the Poincare disk
 - `tests/`: Test files for verifying functionality
-
-The tests are organized into separate files by functionality:
-- `tests/test_typing.py`: Type annotation verification tests
-- `tests/test_model_types.py`: Tests for classifier and regressor functionality
-- `tests/test_toy_data.py`: Tests for data generation utilities
-- `tests/test_equivalence.py`: Tests comparing the new implementation to the legacy code
-- `tests/test_sklearn_compatibility.py`: Tests for scikit-learn API compatibility
+  - `test_typing.py`: Type annotation verification tests
+  - `test_model_types.py`: Tests for classifier and regressor functionality
+  - `test_toy_data.py`: Tests for data generation utilities
+  - `test_equivalence.py`: Tests comparing the new implementation to the legacy code
+  - `test_oblique_models.py`: Tests verifying oblique decision trees can train
+  - `test_midpoint_override.py`: Verifies models are editable by zeroing out midpoints
 
 The package has a modular design with optional dependencies:
 - Core functionality only requires numpy, scikit-learn, scipy, and matplotlib

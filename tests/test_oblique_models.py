@@ -152,22 +152,18 @@ def test_midpoint_methods():
     # Generate and prepare data for binary classification
     X_train, X_test, y_train, y_test = prepare_test_data(task="classification", n_classes=2)
 
-    # Make sure we're using binary labels for consistency
-    y_train_bin = (y_train > 0).astype(int)
-    y_test_bin = (y_test > 0).astype(int)
-
     midpoint_used = {}
     for method in ["einstein", "naive", "zero"]:
         # Create and fit model with different midpoint methods
         clf = HyperbolicHouseHolderClassifier(
             max_depth=3, timelike_dim=0, validate_input_geometry=False, midpoint_method=method
         )
-        clf.fit(X_train, y_train_bin)
+        clf.fit(X_train, y_train)
 
         # Just check that the model can be trained with different midpoint methods
         # Make predictions and verify they're the correct shape
         y_pred = clf.predict(X_test)
-        assert y_pred.shape == y_test_bin.shape
+        assert y_pred.shape == y_test.shape
         midpoint_used[method] = True
 
     for method in midpoint_used:
