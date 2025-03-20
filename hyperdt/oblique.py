@@ -100,4 +100,8 @@ class HyperbolicContinuouslyOptimizedClassifier(HyperbolicContinuouslyOptimized,
 
 class HyperbolicContinuouslyOptimizedRegressor(HyperbolicContinuouslyOptimized, RegressorMixin):
     def __init__(self, *args, **kwargs):
+        if "impurity" not in kwargs:
+            kwargs["impurity"] = MSE()
+        if "segmentor" not in kwargs:
+            kwargs["segmentor"] = MeanSegmentor()
         super().__init__(*args, task="regression", **kwargs)
