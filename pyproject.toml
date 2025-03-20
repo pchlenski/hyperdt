@@ -10,10 +10,14 @@ authors = [
     {name = "Philippe Chlenski", email = "pac@cs.columbia.edu"}
 ]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = {text = "MIT"}
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
@@ -72,14 +76,14 @@ addopts = "--cov=hyperdt"
 
 [tool.black]
 line-length = 120
-target-version = ["py38"]
+target-version = ["py39"]
 
 [tool.isort]
 profile = "black"
 line_length = 120
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = false
 warn_unused_configs = true
 ignore_missing_imports = true

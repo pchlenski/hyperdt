@@ -29,8 +29,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false  # Continue with other Python versions if one fails
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
 
     steps:
     - uses: actions/checkout@v4
@@ -43,14 +44,13 @@ jobs:
         python -m pip install --upgrade pip
         # Install the package with all dependencies
         pip install -e ".[test]"
-        # Try to install optional dependencies, continue if they fail
-        pip install -e ".[xgboost]" || echo "XGBoost installation failed - continuing without it"
-        pip install -e ".[legacy]" || echo "Legacy dependencies installation failed - continuing without them"
+        # Install all extras in one step
+        pip install -e ".[all]" || echo "Some optional dependencies installation failed - continuing anyway"
     - name: Check type annotations with mypy
       run: |
         # Check core modules which have proper type annotations
         # Disable error for untyped imports
-        mypy --ignore-missing-imports --no-warn-return-any --follow-imports=skip hyperdt/_base.py hyperdt/tree.py hyperdt/ensemble.py hyperdt/_xgboost.py
+        mypy --ignore-missing-imports --no-warn-return-any --follow-imports=skip hyperdt/_base.py hyperdt/tree.py hyperdt/ensemble.py hyperdt/xgboost.py
       continue-on-error: true  # Allow mypy to fail but continue the workflow
     - name: Run tests
       run: |
@@ -61,10 +61,8 @@ jobs:
         python -c "import sklearn; print(f'scikit-learn version: {sklearn.__version__}')"
         # Create needed directories for tests
         mkdir -p tests/images
-        # Skip scikit-learn compatibility tests for now - focus on core functionality
-        # Downgrade scikit-learn to a known compatible version
-        echo "Installing scikit-learn 1.3.2 which is known to be compatible..."
-        pip install scikit-learn==1.3.2
+        # Show scikit-learn version that will be used for tests
+        echo "Using scikit-learn version: $(pip show scikit-learn | grep Version)"
         # Run the subset of tests that are more likely to pass
         # Note: We ensure there's no import from faster_tree.py which was refactored
         echo "Checking no legacy imports..."
@@ -73,7 +71,7 @@ jobs:
         pytest tests/test_typing.py tests/test_model_types.py tests/test_toy_data.py tests/test_equivalence.py -v --cov=hyperdt
     - name: Run minimal sklearn compatibility check
       run: |
-        python -c "from sklearn.pipeline import Pipeline; from hyperdt import HyperbolicDecisionTreeClassifier; import numpy as np; X = np.random.random((10, 5)); X[:, 0] = np.sqrt(np.sum(X[:, 1:]**2, axis=1) + 1); y = np.random.randint(0, 2, 10); pipe = Pipeline([('clf', HyperbolicDecisionTreeClassifier(skip_hyperboloid_check=True))]); pipe.fit(X, y); y_pred = pipe.predict(X); print('Pipeline test passed!')"
+        python -c "from sklearn.pipeline import Pipeline; from hyperdt import HyperbolicDecisionTreeClassifier; import numpy as np; X = np.random.random((10, 5)); X[:, 0] = np.sqrt(np.sum(X[:, 1:]**2, axis=1) + 1); y = np.random.randint(0, 2, 10); pipe = Pipeline([('clf', HyperbolicDecisionTreeClassifier(validate_input_geometry=False))]); pipe.fit(X, y); y_pred = pipe.predict(X); print('Pipeline test passed!')"
       continue-on-error: true  # Allow this test to fail, but continue the workflow
     - name: Generate coverage report
       run: |
