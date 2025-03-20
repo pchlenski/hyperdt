@@ -55,15 +55,13 @@ xgboost = [
 ]
 legacy = []
 oblique = [
-    "scikit-obliquetree>=0.1.0,<0.2.0",
-    "numba>=0.60.0,<0.62.0",
-    "llvmlite>=0.41.0,<0.45.0",
+    "scikit-obliquetree>=0.1.0",
+    "numba>=0.56",
 ]
 all = [
     "xgboost>=1.5.0",
-    "scikit-obliquetree>=0.1.0,<0.2.0",
-    "numba>=0.60.0,<0.62.0",
-    "llvmlite>=0.41.0,<0.45.0",
+    "scikit-obliquetree>=0.1.0",
+    "numba>=0.56.0",
 ]
 
 [project.urls]
