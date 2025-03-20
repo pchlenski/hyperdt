@@ -179,15 +179,18 @@ def test_householder_regressor(hyperbolic_data):
 def test_co2_classifier(hyperbolic_data):
     """Test that HyperbolicContinuouslyOptimizedClassifier works."""
     X, y_class, _ = hyperbolic_data
+    
+    # CO2 only supports binary classification, convert to binary problem
+    binary_y = (y_class <= 1).astype(int)  # Convert to binary: class 0 and classes 1,2 combined
 
     # Test CO2 classifier
     co2_clf = HyperbolicContinuouslyOptimizedClassifier(
         max_depth=3, curvature=1.0, timelike_dim=0, validate_input_geometry=False
     )
-    co2_clf.fit(X, y_class)
+    co2_clf.fit(X, binary_y)
     co2_y_pred = co2_clf.predict(X)
 
-    assert co2_y_pred.shape == y_class.shape
+    assert co2_y_pred.shape == binary_y.shape
 
 
 @pytest.mark.skipif(not OBLIQUE_AVAILABLE, reason="scikit-obliquetree not installed")
