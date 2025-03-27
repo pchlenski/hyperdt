@@ -111,7 +111,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
                 min_len = np.min([len(y[left]), len(y[right])])
                 if min_len >= self.min_samples_leaf:
                     score = self._information_gain(left, right, y)
-                    if score >= best_score + self.min_impurity_decrease:
+                    if score > best_score and score >= self.min_impurity_decrease:
                         best_dim, best_theta, best_score = dim, theta, score
 
         # Fallback case:

@@ -121,6 +121,8 @@ class HyperbolicDecisionTree(BaseEstimator):
             return (u + v) / 2
         elif self.midpoint_method == "zero":
             return 0
+        elif self.midpoint_method == "random":
+            return np.random.rand() * (v - u) + u
         else:
             raise ValueError(f"Unknown midpoint method: {self.midpoint_method}.")
 
