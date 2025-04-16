@@ -102,7 +102,8 @@ class HyperbolicDecisionTree(BaseEstimator):
             X_klein = X * coefs.reshape(-1, 1)
         else:
             raise ValueError(f"Unknown input geometry: {self.input_geometry}.")
-        self._validate_klein(X_klein)
+        if self.validate_input_geometry:
+            self._validate_klein(X_klein)
         return X_klein
 
     def _midpoint(self, u: float, v: float) -> float:

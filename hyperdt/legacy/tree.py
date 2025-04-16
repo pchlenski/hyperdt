@@ -121,6 +121,9 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
         # Populate:
         node = DecisionNode(feature=best_dim, theta=best_theta)
+
+        # Get gini of this split
+        node.impurity = self._gini(y)
         node.score = best_score
         left, right = self._get_split(X=X, dim=best_dim, theta=best_theta)
         node.left = self._fit_node(X=X[left], y=y[left], depth=depth + 1)
@@ -165,7 +168,7 @@ class DecisionTreeClassifier(BaseEstimator, ClassifierMixin):
 
     def _left(self, x: np.ndarray, node: DecisionNode) -> bool:
         """Boolean: Go left?"""
-        return x[node.feature] < node.theta  # type: ignore
+        return x[node.feature] <= node.theta  # type: ignore
 
     def _traverse(self, x: np.ndarray, node: Optional[DecisionNode] = None) -> DecisionNode:
         """Traverse a decision tree for a single point"""
@@ -269,7 +272,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
     def _get_split(self, X: NDArray[np.float32], dim: int, theta: float) -> Tuple[NDArray[np.bool_], NDArray[np.bool_]]:
         """Get the indices of the split"""
         p = self._dot(X, dim, theta)
-        return p < 0, p >= 0
+        return p <= 0, p > 0
 
     def _get_candidates(self, X: NDArray[np.float32], dim: int) -> NDArray[np.float32]:
         if self.candidates == "data":
@@ -349,7 +352,7 @@ class HyperbolicDecisionTreeClassifier(DecisionTreeClassifier):
         """Boolean: Go left?"""
         assert node.feature is not None  # for type checker
         assert node.theta is not None  # for type checker
-        return self._dot(x.reshape(1, -1), node.feature, node.theta).item() < 0
+        return self._dot(x.reshape(1, -1), node.feature, node.theta).item() <= 0
 
 
 class DecisionTreeRegressor(DecisionTreeClassifier):

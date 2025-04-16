@@ -70,6 +70,8 @@ def wrapped_normal_mixture(
         ],
         axis=1,
     )
+    if adjust_for_dim:
+        means /= num_dims
     means = hyp.metric.exp(tangent_vec=means, base_point=origin)
 
     # Generate random covariance matrices
