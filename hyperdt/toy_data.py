@@ -29,6 +29,7 @@ def wrapped_normal_mixture(
     noise_std: float = 1.0,
     seed: Optional[int] = None,
     adjust_for_dim: bool = True,
+    regression: bool = False
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate points from a mixture of Gaussians on the hyperboloid.
@@ -47,6 +48,8 @@ def wrapped_normal_mixture(
         Random seed (default: None)
     adjust_for_dim: bool
         Adjust the covariance matrices for the dimension of the hyperboloid (default: True)
+    regression: bool
+        Whether to perform regression (default: False)
 
     Returns:
     --------
@@ -104,5 +107,21 @@ def wrapped_normal_mixture(
     tangent_vecs_transported = tangent_vecs_transported[keep]
     classes = classes[keep]
     points = hyp.metric.exp(tangent_vec=tangent_vecs_transported, base_point=means[classes])
+
+    # If regression, use class-specific slopes + intercepts
+    if regression:
+        slopes = (0.5 - np.random.randn(num_classes, num_dims)) * 2
+        intercepts = (0.5 - np.random.randn(num_classes)) * 20
+        vals = (
+            np.einsum("ij,ij->i", slopes[classes], tangent_vecs_transported[:, 1:]) + intercepts[classes]
+        )
+
+        # Noise component
+        noise = np.random.normal(0, noise_std, size=num_points)
+        vals += noise[keep]
+
+        # Normalize regression labels to range [0, 1]
+        vals = (vals - vals.min()) / (vals.max() - vals.min())
+        classes = vals  # Overwrite class variable for ease of use
 
     return points, classes
