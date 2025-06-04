@@ -60,8 +60,6 @@ class HyperbolicXGBoost(HyperbolicDecisionTree):
         # Adjust threshold to be the average of closest values on either side
         left_mask = feature_values <= threshold
         right_mask = ~left_mask
-
-        # Adjust this node's threshold using Einstein midpoints instead of naive averages as in base sklearn
         left_max = np.max(feature_values[left_mask])  # Closest point from left
         right_min = np.min(feature_values[right_mask])  # Closest point from right
         tree["split_conditions"][node_id] = self._midpoint(left_max, right_min)

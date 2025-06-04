@@ -1,4 +1,5 @@
-"""LightGBM implementations for hyperbolic space.
+"""
+LightGBM implementations for hyperbolic space.
 
 This module provides LightGBM classifiers and regressors that operate
 natively in hyperbolic space.
@@ -39,20 +40,24 @@ class HyperbolicLightGBM(HyperbolicDecisionTree):
         super().__init__(backend="lightgbm", *args, **kwargs)
 
     def _fix_node_recursive(self, node: Any, X_klein: np.ndarray) -> None:
-        if "left_child" not in node:
+        if "left_child" not in node:  # Leaf node
             return
 
+        # Get feature and threshold
         feature = node["split_feature"]
         threshold = node["threshold"]
 
+        # Get threshold
         feature_values = X_klein[:, feature]
+
+        # Adjust threshold to be the average of closest values on either side
         left_mask = feature_values <= threshold
         right_mask = ~left_mask
-
         left_max = np.max(feature_values[left_mask])
         right_min = np.min(feature_values[right_mask])
         node["threshold"] = float(self._midpoint(left_max, right_min))
 
+        # Recurse
         self._fix_node_recursive(node["left_child"], X_klein[left_mask])
         self._fix_node_recursive(node["right_child"], X_klein[right_mask])
 
@@ -108,16 +113,24 @@ class HyperbolicLightGBM(HyperbolicDecisionTree):
         self.estimator_._Booster = new_booster
 
     def _extract_thresholds_bfs(self, node: Any) -> List[float]:
-        """Return thresholds in LightGBM BFS order."""
-        thresholds = []
-        queue = [node]
-        while queue:
-            n = queue.pop(0)
+        """Return thresholds in LightGBM's node ID order."""
+        # First, collect all nodes with their IDs
+        node_thresholds = {}
+
+        def collect_with_id(n, node_id):
             if "left_child" in n:
-                thresholds.append(float(n["threshold"]))
-                queue.append(n["left_child"])
-                queue.append(n["right_child"])
-        return thresholds
+                node_thresholds[node_id] = float(n["threshold"])
+                # Recurse to children
+                if isinstance(n["left_child"], dict):
+                    collect_with_id(n["left_child"], n["left_child"].get("split_index", len(node_thresholds)))
+                if isinstance(n["right_child"], dict):
+                    collect_with_id(n["right_child"], n["right_child"].get("split_index", len(node_thresholds)))
+
+        # Start from root with ID 0
+        collect_with_id(node, 0)
+
+        # Return thresholds in order of node IDs
+        return [node_thresholds[i] for i in sorted(node_thresholds.keys())]
 
 
 class HyperbolicLGBMClassifier(HyperbolicLightGBM, ClassifierMixin):
@@ -132,4 +145,3 @@ class HyperbolicLGBMRegressor(HyperbolicLightGBM, RegressorMixin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(task="regression", *args, **kwargs)
-
