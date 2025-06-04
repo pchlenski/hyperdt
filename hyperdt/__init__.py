@@ -29,6 +29,16 @@ try:
 except ImportError:
     XGBOOST_AVAILABLE = False
 
+# Check if LightGBM is available and import optional LightGBM implementations
+try:
+    from .lightgbm import (
+        LIGHTGBM_AVAILABLE,
+        HyperbolicLGBMClassifier,
+        HyperbolicLGBMRegressor,
+    )
+except ImportError:
+    LIGHTGBM_AVAILABLE = False
+
 # Check if legacy module is available (requires geomstats)
 try:
     from .legacy import LEGACY_AVAILABLE
@@ -54,6 +64,7 @@ __all__ = [
     "HyperbolicRandomForestClassifier",
     "HyperbolicRandomForestRegressor",
     "XGBOOST_AVAILABLE",
+    "LIGHTGBM_AVAILABLE",
     "LEGACY_AVAILABLE",
     "OBLIQUE_AVAILABLE",
 ]
@@ -61,6 +72,10 @@ __all__ = [
 # Add XGBoost classes to __all__ if available
 if XGBOOST_AVAILABLE:
     __all__.extend(["HyperbolicXGBoostClassifier", "HyperbolicXGBoostRegressor"])
+
+# Add LightGBM classes to __all__ if available
+if LIGHTGBM_AVAILABLE:
+    __all__.extend(["HyperbolicLGBMClassifier", "HyperbolicLGBMRegressor"])
 
 # Add Oblique decision tree classes to __all__ if available
 if OBLIQUE_AVAILABLE:

@@ -53,6 +53,9 @@ test = [
 xgboost = [
     "xgboost>=1.5.0",
 ]
+lightgbm = [
+    "lightgbm>=3.3.5",
+]
 legacy = []
 oblique = [
     "scikit-obliquetree>=0.1.0",
@@ -60,6 +63,7 @@ oblique = [
 ]
 all = [
     "xgboost>=1.5.0",
+    "lightgbm>=3.3.5",
     "scikit-obliquetree>=0.1.0",
     "numba>=0.56.0",
 ]
