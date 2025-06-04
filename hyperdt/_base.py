@@ -16,7 +16,7 @@ class HyperbolicDecisionTree(BaseEstimator):
 
     def __init__(
         self,
-        backend: Literal["sklearn_dt", "sklearn_rf", "xgboost", "hhcart", "co2"] = "sklearn_dt",
+        backend: Literal["sklearn_dt", "sklearn_rf", "xgboost", "lightgbm", "hhcart", "co2"] = "sklearn_dt",
         task: Literal["classification", "regression"] = "classification",
         curvature: float = 1.0,
         timelike_dim: int = 0,
@@ -39,11 +39,13 @@ class HyperbolicDecisionTree(BaseEstimator):
             ("classification", "sklearn_dt"): ("sklearn.tree", "DecisionTreeClassifier"),
             ("classification", "sklearn_rf"): ("sklearn.ensemble", "RandomForestClassifier"),
             ("classification", "xgboost"): ("xgboost", "XGBClassifier"),
+            ("classification", "lightgbm"): ("lightgbm", "LGBMClassifier"),
             ("classification", "hhcart"): ("scikit_obliquetree.HHCART", "HouseHolderCART"),
             ("classification", "co2"): ("scikit_obliquetree.CO2", "ContinuouslyOptimizedObliqueRegressionTree"),
             ("regression", "sklearn_dt"): ("sklearn.tree", "DecisionTreeRegressor"),
             ("regression", "sklearn_rf"): ("sklearn.ensemble", "RandomForestRegressor"),
             ("regression", "xgboost"): ("xgboost", "XGBRegressor"),
+            ("regression", "lightgbm"): ("lightgbm", "LGBMRegressor"),
             ("regression", "hhcart"): ("scikit_obliquetree.HHCART", "HouseHolderCART"),
             ("regression", "co2"): ("scikit_obliquetree.CO2", "ContinuouslyOptimizedObliqueRegressionTree"),
         }

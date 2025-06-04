@@ -15,6 +15,7 @@ from hyperdt import (
 )
 from hyperdt.toy_data import wrapped_normal_mixture
 from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
+from hyperdt.lightgbm import HyperbolicLGBMClassifier, HyperbolicLGBMRegressor
 
 
 # Prepare test data
@@ -182,6 +183,47 @@ def test_xgboost_regressor():
     assert y_pred.shape == y_test.shape, "Wrong prediction shape"
 
 
+def test_lightgbm_classifier():
+    """Test HyperbolicLGBMClassifier."""
+    print("Testing HyperbolicLGBMClassifier...")
+
+    X_train, X_test, y_train, y_test = prepare_test_data(task="classification")
+
+    clf = HyperbolicLGBMClassifier(
+        n_estimators=10, max_depth=3, learning_rate=0.1, timelike_dim=0, validate_input_geometry=False
+    )
+    clf.fit(X_train, y_train)
+
+    y_pred = clf.predict(X_test)
+    y_pred_proba = clf.predict_proba(X_test)
+
+    accuracy = accuracy_score(y_test, y_pred)
+    print(f"  Accuracy: {accuracy:.4f}")
+    print(f"  Probability shape: {y_pred_proba.shape}")
+
+    assert y_pred.shape == y_test.shape
+    assert y_pred_proba.shape == (X_test.shape[0], len(np.unique(y_train)))
+
+
+def test_lightgbm_regressor():
+    """Test HyperbolicLGBMRegressor."""
+    print("Testing HyperbolicLGBMRegressor...")
+
+    X_train, X_test, y_train, y_test = prepare_test_data(task="regression")
+
+    reg = HyperbolicLGBMRegressor(
+        n_estimators=10, max_depth=3, learning_rate=0.1, timelike_dim=0, validate_input_geometry=False
+    )
+    reg.fit(X_train, y_train)
+
+    y_pred = reg.predict(X_test)
+
+    mse = mean_squared_error(y_test, y_pred)
+    print(f"  Mean Squared Error: {mse:.4f}")
+
+    assert y_pred.shape == y_test.shape
+
+
 if __name__ == "__main__":
     print("=== Testing HyperbolicDecisionTree Models ===")
 
@@ -189,10 +231,13 @@ if __name__ == "__main__":
     test_decision_tree_classifier()
     test_random_forest_classifier()
     test_xgboost_classifier()
+    test_lightgbm_classifier()
 
     # Test regressors
     test_decision_tree_regressor()
     test_random_forest_regressor()
     test_xgboost_regressor()
+    test_lightgbm_regressor()
 
     print("\nAll tests completed successfully!")
+

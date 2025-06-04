@@ -16,6 +16,7 @@ from hyperdt import (
 )
 from hyperdt.toy_data import wrapped_normal_mixture
 from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
+from hyperdt.lightgbm import HyperbolicLGBMClassifier, HyperbolicLGBMRegressor
 
 # Import oblique models if available
 if OBLIQUE_AVAILABLE:
@@ -147,6 +148,36 @@ def test_xgboost_regressor(hyperbolic_data):
 
     assert xgb_y_pred_reg.shape == y_reg.shape
     assert hasattr(xgb_reg.estimator_, "feature_importances_")
+
+
+def test_lightgbm_classifier(hyperbolic_data):
+    """Test that HyperbolicLGBMClassifier works."""
+    X, y_class, _ = hyperbolic_data
+
+    lgb_clf = HyperbolicLGBMClassifier(
+        n_estimators=3, max_depth=3, learning_rate=0.1, curvature=1.0, timelike_dim=0, validate_input_geometry=False
+    )
+    lgb_clf.fit(X, y_class)
+    lgb_y_pred = lgb_clf.predict(X)
+    lgb_y_proba = lgb_clf.predict_proba(X)
+
+    assert lgb_y_pred.shape == y_class.shape
+    assert lgb_y_proba.shape[0] == y_class.shape[0]
+    assert hasattr(lgb_clf.estimator_, "feature_importances_")
+
+
+def test_lightgbm_regressor(hyperbolic_data):
+    """Test that HyperbolicLGBMRegressor works."""
+    X, _, y_reg = hyperbolic_data
+
+    lgb_reg = HyperbolicLGBMRegressor(
+        n_estimators=3, max_depth=3, learning_rate=0.1, curvature=1.0, timelike_dim=0, validate_input_geometry=False
+    )
+    lgb_reg.fit(X, y_reg)
+    lgb_y_pred_reg = lgb_reg.predict(X)
+
+    assert lgb_y_pred_reg.shape == y_reg.shape
+    assert hasattr(lgb_reg.estimator_, "feature_importances_")
 
 
 @pytest.mark.skipif(not OBLIQUE_AVAILABLE, reason="scikit-obliquetree not installed")
