@@ -368,7 +368,7 @@ class DecisionTreeRegressor(DecisionTreeClassifier):
 
     def _leaf_values(self, y: NDArray[np.float32]) -> Tuple[float, None]:
         """Return the value and probability (dummy) of a leaf node"""
-        return np.mean(y), None  #  type: ignore
+        return np.mean(y), None  # type: ignore
 
     def predict(self, X: NDArray[np.float32]) -> NDArray[np.float32]:
         """

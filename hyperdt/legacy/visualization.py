@@ -5,8 +5,8 @@ from typing import Any, List, Literal, Optional, Tuple, Union, cast
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
-from matplotlib.lines import Line2D
 from matplotlib.colors import to_rgba
+from matplotlib.lines import Line2D
 from scipy.interpolate import interp1d
 
 from .conversions import convert
@@ -74,7 +74,7 @@ def _get_mask(boundary_dim: int, geodesic: np.ndarray) -> np.ndarray:
     # Adjust dimensions for interpolation (convert from 1-indexed to 0-indexed)
     boundary_dim = boundary_dim - 1  # Input is {1, 2} but want {0, 1}
     independent_dim = 1 - boundary_dim  # Assume {0, 1}
-    
+
     # Interpolate geodesic as a function of independent dimension
     geodesic_interp = interp1d(
         geodesic[:, independent_dim],
@@ -117,7 +117,7 @@ def plot_boundary(
 ) -> Union[Axes, Tuple[Axes, np.ndarray]]:
     """
     Plot a single decision boundary of a hyperbolic decision tree
-    
+
     Args:
         boundary_dim: Which dimension for the decision hyperplane (0, 1, 2)
         boundary_theta: Inclination angle of the hyperplane (radians, pi/4 to 3pi/4)
@@ -140,11 +140,7 @@ def plot_boundary(
 
     # Get geodesics
     geodesic_points = _get_geodesic(
-        dim=boundary_dim, 
-        theta=boundary_theta, 
-        geometry=geometry, 
-        t_dim=t_dim, 
-        timelike_dim=timelike_dim
+        dim=boundary_dim, theta=boundary_theta, geometry=geometry, t_dim=t_dim, timelike_dim=timelike_dim
     )
 
     # Get new mask
@@ -152,10 +148,7 @@ def plot_boundary(
 
     # Apply mask to geodesic points if provided
     if mask is not None:
-        geodesic_points = np.stack(
-            _apply_mask(geodesic_points[:, 0], geodesic_points[:, 1], mask), 
-            axis=1
-        )
+        geodesic_points = np.stack(_apply_mask(geodesic_points[:, 0], geodesic_points[:, 1], mask), axis=1)
 
     # Initialize figure if needed
     if ax is None:
@@ -192,14 +185,14 @@ def _plot_tree_recursive(
     # Leaf node case
     if node.value is not None:
         _xx, _yy = np.meshgrid(GRID_RANGE, GRID_RANGE)
-        
+
         # Get the color for this node's class
         majority_class = node.value
         if class_mapping is not None:
             color_idx = class_mapping[majority_class]
         else:
             color_idx = majority_class
-            
+
         # Get RGBA values for the color
         rgba_color = to_rgba(class_colors[color_idx])
 
@@ -215,31 +208,34 @@ def _plot_tree_recursive(
             image[mask] = (rgba_color[0], rgba_color[1], rgba_color[2], 0.5)
         ax.imshow(image, origin="lower", extent=(-1, 1, -1, 1), aspect="auto")
         return ax
-    
+
     # Internal node case
     else:
         assert node.theta is not None and node.feature is not None
-        
+
         # Adjust theta for Minkowski space if needed
         theta = -node.theta if minkowski else node.theta
-        
+
         # Get color for this depth level
         color = boundary_colors[depth % len(boundary_colors)]
-        
+
         # Plot boundary and get new mask
-        ax, new_mask = cast(Tuple[Axes, np.ndarray], plot_boundary(
-            boundary_dim=node.feature,
-            boundary_theta=theta,
-            color=color,
-            mask=mask,
-            return_mask=True,
-            ax=ax,
-            style=LINE_STYLES[depth % len(LINE_STYLES)],
-            geometry=geometry,
-            timelike_dim=timelike_dim,
-            **kwargs,
-        ))
-        
+        ax, new_mask = cast(
+            Tuple[Axes, np.ndarray],
+            plot_boundary(
+                boundary_dim=node.feature,
+                boundary_theta=theta,
+                color=color,
+                mask=mask,
+                return_mask=True,
+                ax=ax,
+                style=LINE_STYLES[depth % len(LINE_STYLES)],
+                geometry=geometry,
+                timelike_dim=timelike_dim,
+                **kwargs,
+            ),
+        )
+
         # Common parameters for recursive calls
         reuse = {
             "ax": ax,
@@ -267,7 +263,7 @@ def _plot_tree_recursive(
         assert node.left is not None and node.right is not None
         ax = _plot_tree_recursive(node.left, mask=mask_left, **reuse)
         ax = _plot_tree_recursive(node.right, mask=mask_right, **reuse)
-        
+
         return ax
 
 
@@ -306,26 +302,22 @@ def plot_tree(
     # Use default colors if none provided
     if class_colors is None:
         class_colors = DEFAULT_COLORS
-    
+
     if boundary_colors is None:
         boundary_colors = ["red"]
 
     # Create mapping of original class values to sequential indices
     unique_classes = sorted(hdt.classes_)
     class_mapping = {cls: i for i, cls in enumerate(unique_classes)}
-    
+
     # Plot data points if provided
     if X is not None and y is not None:
         X_converted = convert(X, initial="hyperboloid", final=geometry, timelike_dim=timelike_dim)
-        
+
         # Map class values to colors
         color_list = [class_colors[class_mapping[cls]] for cls in y]
-        
-        ax.scatter(
-            X_converted[:, 0], X_converted[:, 1], 
-            c=color_list, marker="o", s=49, 
-            edgecolors="k", linewidths=1
-        )
+
+        ax.scatter(X_converted[:, 0], X_converted[:, 1], c=color_list, marker="o", s=49, edgecolors="k", linewidths=1)
 
     # Initialize mask
     mask = np.full(shape=(GRID_SIZE, GRID_SIZE), fill_value=True) if masked else None
@@ -344,26 +336,40 @@ def plot_tree(
         class_mapping=class_mapping,
         **kwargs,
     )
-    
+
     # Add legend for boundary depths
     depth_handles = [
-        Line2D([0], [0], color=boundary_colors[i % len(boundary_colors)], 
-               linestyle=LINE_STYLES[i % len(LINE_STYLES)], label=f"Depth {i}") 
+        Line2D(
+            [0],
+            [0],
+            color=boundary_colors[i % len(boundary_colors)],
+            linestyle=LINE_STYLES[i % len(LINE_STYLES)],
+            label=f"Depth {i}",
+        )
         for i in range(min(hdt.max_depth, 4))  # Only show first few depths to avoid clutter
     ]
-    
+
     # Add legend for classes
     class_handles = [
-        Line2D([0], [0], marker='o', color='w', markerfacecolor=class_colors[i], 
-               markersize=8, label=f"Class {cls}", markeredgecolor='k', linestyle='')
+        Line2D(
+            [0],
+            [0],
+            marker="o",
+            color="w",
+            markerfacecolor=class_colors[i],
+            markersize=8,
+            label=f"Class {cls}",
+            markeredgecolor="k",
+            linestyle="",
+        )
         for i, cls in enumerate(unique_classes)
     ]
-    
+
     # Combine legends
-    ax.legend(handles=depth_handles + class_handles, loc='best')
+    ax.legend(handles=depth_handles + class_handles, loc="best")
 
     # Draw unit circle
-    theta = np.linspace(0, 2*np.pi, UNIT_CIRCLE_POINTS)
+    theta = np.linspace(0, 2 * np.pi, UNIT_CIRCLE_POINTS)
     ax.plot(np.cos(theta), np.sin(theta), c="black", lw=2)
 
     # Set axis limits

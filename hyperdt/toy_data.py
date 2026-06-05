@@ -29,7 +29,7 @@ def wrapped_normal_mixture(
     noise_std: float = 1.0,
     seed: Optional[int] = None,
     adjust_for_dim: bool = True,
-    regression: bool = False
+    regression: bool = False,
 ) -> Tuple[np.ndarray, np.ndarray]:
     """
     Generate points from a mixture of Gaussians on the hyperboloid.
@@ -112,9 +112,7 @@ def wrapped_normal_mixture(
     if regression:
         slopes = (0.5 - np.random.randn(num_classes, num_dims)) * 2
         intercepts = (0.5 - np.random.randn(num_classes)) * 20
-        vals = (
-            np.einsum("ij,ij->i", slopes[classes], tangent_vecs_transported[:, 1:]) + intercepts[classes]
-        )
+        vals = np.einsum("ij,ij->i", slopes[classes], tangent_vecs_transported[:, 1:]) + intercepts[classes]
 
         # Noise component
         noise = np.random.normal(0, noise_std, size=num_points)

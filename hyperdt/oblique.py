@@ -42,13 +42,14 @@ class HyperbolicHouseHolder(HyperbolicDecisionTree):
 
     def _postprocess(self, X_klein: np.ndarray) -> None:
         self._fix_node_recursive(self.estimator_._root, X_klein)
-    
+
     def predict_proba(self, X: np.ndarray) -> np.ndarray:
         X_klein = self._preprocess(X)
-        return self.estimator_.predict(X_klein) # This only predicts probabilities
+        return self.estimator_.predict(X_klein)  # This only predicts probabilities
 
     def predict(self, X: ArrayLike) -> ArrayLike:
         return (self.predict_proba(X) > 0.5).astype(int)
+
 
 class HyperbolicHouseHolderClassifier(HyperbolicHouseHolder, ClassifierMixin):
     def __init__(self, *args, **kwargs):
