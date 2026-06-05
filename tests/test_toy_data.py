@@ -73,3 +73,14 @@ class TestToyData:
 
         np.testing.assert_array_equal(points1, points2)
         np.testing.assert_array_equal(classes1, classes2)
+
+    def test_wrapped_normal_mixture_regression(self):
+        """Regression mode returns continuous targets normalized to [0, 1]."""
+        points, targets = wrapped_normal_mixture(num_points=100, num_classes=3, num_dims=4, seed=42, regression=True)
+
+        # Points still lie on the hyperboloid; targets are continuous, not labels
+        assert points.shape[0] == targets.shape[0]
+        assert np.issubdtype(targets.dtype, np.floating)
+        assert targets.min() >= 0.0 and targets.max() <= 1.0
+        # A genuine continuous spread, not a handful of integer labels
+        assert np.unique(targets).size > 3
