@@ -24,7 +24,9 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Mathematics",
 ]
 dependencies = [
-    "numpy>=1.20.0",
+    # geomstats (<=2.8.0, the latest release) imports numpy.trapz, which was
+    # removed in numpy 2.0; cap numpy until a numpy-2-compatible geomstats ships.
+    "numpy>=1.20.0,<2.0",
     "geomstats>=2.5.0",
     "matplotlib>=3.5.0",
     "scikit-learn>=1.4.0", # Updated minimum to ensure random forest classes has estimators_samples_ attribute
