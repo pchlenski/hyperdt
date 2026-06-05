@@ -23,9 +23,9 @@ def test_midpoint_override_affects_performance():
     normal_pred = normal_model.predict(X_test)
     normal_acc = accuracy_score(y_test, normal_pred)
 
-    # Create a subclass with an overridden einstein_midpoint method that always returns 0
+    # Create a subclass with an overridden midpoint method that always returns 0
     class ZeroMidpointModel(HyperbolicDecisionTreeClassifier):
-        def _einstein_midpoint(self, u, v):
+        def _midpoint(self, u, v):
             # Return 0 instead of the actual midpoint
             return 0.0
 
