@@ -45,14 +45,16 @@ dev = [
     "black>=26.0",
     "isort>=8.0",
     "mypy>=0.950",
-    "typing_extensions>=4.0.0",
+    # >=4.6 because pytest's exceptiongroup backport (py<3.11) uses TypeVar(default=...).
+    "typing_extensions>=4.6.0",
     "types-setuptools",
 ]
 test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "mypy>=0.950",
-    "typing_extensions>=4.0.0",
+    # >=4.6 because pytest's exceptiongroup backport (py<3.11) uses TypeVar(default=...).
+    "typing_extensions>=4.6.0",
     "types-setuptools",
 ]
 xgboost = [
@@ -71,6 +73,10 @@ all = [
     "lightgbm>=3.3.5",
     "scikit-obliquetree>=0.1.0",
     "numba>=0.56.0",
+    # CI installs [test] then [all] as a second pip pass; keep the typing_extensions
+    # floor here too so the [all] resolution can't downgrade it below what pytest's
+    # exceptiongroup backport (py<3.11) needs for TypeVar(default=...).
+    "typing_extensions>=4.6.0",
 ]
 
 [project.urls]
