@@ -61,12 +61,16 @@ class HyperbolicXGBoost(HyperbolicDecisionTree):
         # Get feature values
         feature_values = X_klein[:, feature]
 
-        # Adjust threshold to be the average of closest values on either side
+        # Adjust threshold to be the average of closest values on either side.
+        # XGBoost can place a split threshold outside the range of the points
+        # that actually reach this node, so one side may be empty; only adjust
+        # the threshold when both sides have points (matching the oblique path).
         left_mask = feature_values <= threshold
         right_mask = ~left_mask
-        left_max = np.max(feature_values[left_mask])  # Closest point from left
-        right_min = np.min(feature_values[right_mask])  # Closest point from right
-        tree["split_conditions"][node_id] = self._midpoint(left_max, right_min)
+        if np.any(left_mask) and np.any(right_mask):
+            left_max = np.max(feature_values[left_mask])  # Closest point from left
+            right_min = np.min(feature_values[right_mask])  # Closest point from right
+            tree["split_conditions"][node_id] = self._midpoint(left_max, right_min)
 
         # Recurse
         self._fix_node_recursive(tree, tree["left_children"][node_id], X_klein[left_mask])

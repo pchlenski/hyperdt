@@ -50,12 +50,15 @@ class HyperbolicLightGBM(HyperbolicDecisionTree):
         # Get threshold
         feature_values = X_klein[:, feature]
 
-        # Adjust threshold to be the average of closest values on either side
+        # Adjust threshold to be the average of closest values on either side.
+        # A split may not partition the points that actually reach this node, so
+        # one side can be empty; only adjust when both sides have points.
         left_mask = feature_values <= threshold
         right_mask = ~left_mask
-        left_max = np.max(feature_values[left_mask])
-        right_min = np.min(feature_values[right_mask])
-        node["threshold"] = float(self._midpoint(left_max, right_min))
+        if np.any(left_mask) and np.any(right_mask):
+            left_max = np.max(feature_values[left_mask])
+            right_min = np.min(feature_values[right_mask])
+            node["threshold"] = float(self._midpoint(left_max, right_min))
 
         # Recurse
         self._fix_node_recursive(node["left_child"], X_klein[left_mask])

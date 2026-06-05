@@ -19,14 +19,17 @@ from .tree import (
     HyperbolicDecisionTreeRegressor,
 )
 
-# Check if XGBoost is available and import optional XGBoost implementations
+# Check if XGBoost is available and import optional XGBoost implementations.
+# Catch OSError too: a compiled backend whose native library (e.g. libgomp) is
+# missing raises OSError on import, and an optional backend should degrade
+# gracefully rather than crash `import hyperdt`.
 try:
     from .xgboost import (
         XGBOOST_AVAILABLE,
         HyperbolicXGBoostClassifier,
         HyperbolicXGBoostRegressor,
     )
-except ImportError:
+except (ImportError, OSError):
     XGBOOST_AVAILABLE = False
 
 # Check if LightGBM is available and import optional LightGBM implementations
@@ -36,7 +39,7 @@ try:
         HyperbolicLGBMClassifier,
         HyperbolicLGBMRegressor,
     )
-except ImportError:
+except (ImportError, OSError):
     LIGHTGBM_AVAILABLE = False
 
 # Check if legacy module is available (requires geomstats)
@@ -54,7 +57,7 @@ try:
         HyperbolicHouseHolderClassifier,
         HyperbolicHouseHolderRegressor,
     )
-except ImportError:
+except (ImportError, OSError):
     OBLIQUE_AVAILABLE = False
 
 __all__ = [
