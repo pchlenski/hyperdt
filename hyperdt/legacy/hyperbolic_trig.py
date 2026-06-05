@@ -43,7 +43,12 @@ def _dist_aberration(m: float, x1: float, x2: float) -> float:
 
 def _hyperbolic_midpoint(a: float, b: float) -> float:
     """New method: analytical closed forms for hyperbolic midpoint"""
-    if np.isclose(a, b):
+    # NOTE: np.isclose defaults to rtol=1e-5, which collapses distinct-but-close
+    # angles onto an endpoint and silently drops the split between two nearly
+    # coincident points from the candidate set. As trees deepen and points
+    # crowd, that can discard the impurity-optimal split and make this tree
+    # diverge from the sklearn-backed implementation. Use a tight tolerance.
+    if np.isclose(a, b, rtol=1e-9, atol=1e-12):
         return a
 
     # Special case for when a + b is very close to π
