@@ -7,7 +7,9 @@ import numpy as np
 import pytest
 
 from hyperdt import (
+    LIGHTGBM_AVAILABLE,
     OBLIQUE_AVAILABLE,
+    XGBOOST_AVAILABLE,
     HyperbolicDecisionTree,
     HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
@@ -15,8 +17,14 @@ from hyperdt import (
     HyperbolicRandomForestRegressor,
 )
 from hyperdt.toy_data import wrapped_normal_mixture
-from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
-from hyperdt.lightgbm import HyperbolicLGBMClassifier, HyperbolicLGBMRegressor
+
+# Import XGBoost models if available
+if XGBOOST_AVAILABLE:
+    from hyperdt import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
+
+# Import LightGBM models if available
+if LIGHTGBM_AVAILABLE:
+    from hyperdt import HyperbolicLGBMClassifier, HyperbolicLGBMRegressor
 
 # Import oblique models if available
 if OBLIQUE_AVAILABLE:
@@ -118,6 +126,7 @@ def test_random_forest_regressor(hyperbolic_data):
     assert hasattr(rf_reg.estimator_, "feature_importances_")
 
 
+@pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="xgboost not installed")
 def test_xgboost_classifier(hyperbolic_data):
     """Test that HyperbolicXGBoostClassifier works."""
     X, y_class, _ = hyperbolic_data
@@ -135,6 +144,7 @@ def test_xgboost_classifier(hyperbolic_data):
     assert hasattr(xgb_clf.estimator_, "feature_importances_")
 
 
+@pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="xgboost not installed")
 def test_xgboost_regressor(hyperbolic_data):
     """Test that HyperbolicXGBoostRegressor works."""
     X, _, y_reg = hyperbolic_data
@@ -150,6 +160,7 @@ def test_xgboost_regressor(hyperbolic_data):
     assert hasattr(xgb_reg.estimator_, "feature_importances_")
 
 
+@pytest.mark.skipif(not LIGHTGBM_AVAILABLE, reason="lightgbm not installed")
 def test_lightgbm_classifier(hyperbolic_data):
     """Test that HyperbolicLGBMClassifier works."""
     X, y_class, _ = hyperbolic_data
@@ -166,6 +177,7 @@ def test_lightgbm_classifier(hyperbolic_data):
     assert hasattr(lgb_clf.estimator_, "feature_importances_")
 
 
+@pytest.mark.skipif(not LIGHTGBM_AVAILABLE, reason="lightgbm not installed")
 def test_lightgbm_regressor(hyperbolic_data):
     """Test that HyperbolicLGBMRegressor works."""
     X, _, y_reg = hyperbolic_data

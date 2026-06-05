@@ -4,18 +4,27 @@ This test suite verifies that each model type can properly fit and predict data.
 """
 
 import numpy as np
+import pytest
 from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.model_selection import train_test_split
 
 from hyperdt import (
+    LIGHTGBM_AVAILABLE,
+    XGBOOST_AVAILABLE,
     HyperbolicDecisionTreeClassifier,
     HyperbolicDecisionTreeRegressor,
     HyperbolicRandomForestClassifier,
     HyperbolicRandomForestRegressor,
 )
 from hyperdt.toy_data import wrapped_normal_mixture
-from hyperdt.xgboost import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
-from hyperdt.lightgbm import HyperbolicLGBMClassifier, HyperbolicLGBMRegressor
+
+# Import XGBoost models if available
+if XGBOOST_AVAILABLE:
+    from hyperdt import HyperbolicXGBoostClassifier, HyperbolicXGBoostRegressor
+
+# Import LightGBM models if available
+if LIGHTGBM_AVAILABLE:
+    from hyperdt import HyperbolicLGBMClassifier, HyperbolicLGBMRegressor
 
 
 # Prepare test data
@@ -132,6 +141,7 @@ def test_random_forest_regressor():
     assert y_pred.shape == y_test.shape, "Wrong prediction shape"
 
 
+@pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="xgboost not installed")
 def test_xgboost_classifier():
     """Test HyperbolicXGBoostClassifier if available."""
     print("Testing HyperbolicXGBoostClassifier...")
@@ -159,6 +169,7 @@ def test_xgboost_classifier():
     assert y_pred_proba.shape == (X_test.shape[0], len(np.unique(y_train))), "Wrong probability shape"
 
 
+@pytest.mark.skipif(not XGBOOST_AVAILABLE, reason="xgboost not installed")
 def test_xgboost_regressor():
     """Test HyperbolicXGBoostRegressor if available."""
     print("Testing HyperbolicXGBoostRegressor...")
@@ -183,6 +194,7 @@ def test_xgboost_regressor():
     assert y_pred.shape == y_test.shape, "Wrong prediction shape"
 
 
+@pytest.mark.skipif(not LIGHTGBM_AVAILABLE, reason="lightgbm not installed")
 def test_lightgbm_classifier():
     """Test HyperbolicLGBMClassifier."""
     print("Testing HyperbolicLGBMClassifier...")
@@ -205,6 +217,7 @@ def test_lightgbm_classifier():
     assert y_pred_proba.shape == (X_test.shape[0], len(np.unique(y_train)))
 
 
+@pytest.mark.skipif(not LIGHTGBM_AVAILABLE, reason="lightgbm not installed")
 def test_lightgbm_regressor():
     """Test HyperbolicLGBMRegressor."""
     print("Testing HyperbolicLGBMRegressor...")
@@ -230,14 +243,25 @@ if __name__ == "__main__":
     # Test classifiers
     test_decision_tree_classifier()
     test_random_forest_classifier()
-    test_xgboost_classifier()
-    test_lightgbm_classifier()
+    if XGBOOST_AVAILABLE:
+        test_xgboost_classifier()
+    else:
+        print("Skipping XGBoost classifier test as xgboost is not installed.")
+    if LIGHTGBM_AVAILABLE:
+        test_lightgbm_classifier()
+    else:
+        print("Skipping LightGBM classifier test as lightgbm is not installed.")
 
     # Test regressors
     test_decision_tree_regressor()
     test_random_forest_regressor()
-    test_xgboost_regressor()
-    test_lightgbm_regressor()
+    if XGBOOST_AVAILABLE:
+        test_xgboost_regressor()
+    else:
+        print("Skipping XGBoost regressor test as xgboost is not installed.")
+    if LIGHTGBM_AVAILABLE:
+        test_lightgbm_regressor()
+    else:
+        print("Skipping LightGBM regressor test as lightgbm is not installed.")
 
     print("\nAll tests completed successfully!")
-
