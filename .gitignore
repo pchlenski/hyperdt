@@ -8,6 +8,8 @@ dist/
 .coverage
 coverage.xml
 .pytest_cache/
+.venv/
+venv/
 
 
 # Hyperbolic learning github repos I cloned
