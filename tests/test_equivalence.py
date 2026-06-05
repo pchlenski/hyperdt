@@ -382,8 +382,7 @@ def test_numerical_precision():
         )
 
 
-def test_all():
-    """Run all verification tests"""
+if __name__ == "__main__":
     print("=== Running Comprehensive Equivalence Tests ===")
     test_mathematical_equivalence()
     test_prediction_agreement()
@@ -393,7 +392,3 @@ def test_all():
     test_baseline_performance()
     test_numerical_precision()
     print("\n=== All Tests Complete ===")
-
-
-if __name__ == "__main__":
-    test_all()
