@@ -5,8 +5,8 @@ This module provides LightGBM classifiers and regressors that operate
 natively in hyperbolic space.
 """
 
-import warnings
 import re
+import warnings
 from typing import Any, List
 
 import lightgbm as lgb

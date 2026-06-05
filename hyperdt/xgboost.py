@@ -12,9 +12,13 @@ import warnings
 from typing import Any
 
 import numpy as np
+import xgboost  # noqa: F401  # gates availability; see __init__.py
 from sklearn.base import ClassifierMixin, RegressorMixin
 
 from ._base import HyperbolicDecisionTree
+
+# Flag indicating this module could be imported successfully
+XGBOOST_AVAILABLE = True
 
 
 class HyperbolicXGBoost(HyperbolicDecisionTree):
