@@ -128,7 +128,7 @@ def test_prediction_agreement(depths=[1, 3, 5, 10, None]):
                     try:
                         orig_feature = orig_tree.tree.feature  # This might be None for leaf nodes
                         # For faster_tree, we use sklearn's tree structure
-                        klein_feature = faster_tree.tree.tree_.feature[0]
+                        klein_feature = faster_tree.estimator_.tree_.feature[0]
 
                         # If we can map between the feature spaces, check if they match
                         if orig_feature is not None and klein_feature is not None:
