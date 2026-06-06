@@ -93,6 +93,17 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 addopts = "--cov=hyperdt"
 
+[tool.coverage.run]
+# Exclude code coverage.py shouldn't count. This applies at measurement time, so
+# the number in the CI log and coverage.xml match what Codecov reports (codecov.yml
+# 'ignore' only filters Codecov's view, not the computed coverage). Keep in sync
+# with .github/codecov.yml. legacy/ is pre-geomstats reference code; oblique.py's
+# dependency (scikit-obliquetree) is uninstallable in CI so its tests can't run.
+omit = [
+    "*/legacy/*",
+    "*/oblique.py",
+]
+
 [tool.black]
 line-length = 120
 target-version = ["py39"]
