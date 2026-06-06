@@ -68,14 +68,16 @@ oblique = [
     "scikit-obliquetree>=0.1.0",
     "numba>=0.56",
 ]
+# NOTE: scikit-obliquetree / numba are deliberately NOT in [all]. scikit-obliquetree
+# hard-pins typing_extensions==3.10.0.2, click==7.1.2 and rich==9.13.0, which makes
+# the whole [all] resolution impossible. CI installs [all] as a second pip pass, so
+# including it there caused the entire install to abort, leaving xgboost/lightgbm
+# uninstalled (and their tests skipped). Use the `oblique` extra for that backend.
 all = [
     "xgboost>=1.5.0",
     "lightgbm>=3.3.5",
-    "scikit-obliquetree>=0.1.0",
-    "numba>=0.56.0",
-    # CI installs [test] then [all] as a second pip pass; keep the typing_extensions
-    # floor here too so the [all] resolution can't downgrade it below what pytest's
-    # exceptiongroup backport (py<3.11) needs for TypeVar(default=...).
+    # Keep the typing_extensions floor so the [all] pass can't downgrade it below
+    # what pytest's exceptiongroup backport (py<3.11) needs for TypeVar(default=...).
     "typing_extensions>=4.6.0",
 ]
 
