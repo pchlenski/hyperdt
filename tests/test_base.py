@@ -76,9 +76,12 @@ def test_midpoint_methods(method):
 
 
 def test_unknown_backend_raises():
-    """An unrecognized backend is rejected at construction time."""
+    """An unrecognized backend is rejected at fit time (sklearn convention:
+    __init__ only stores params, validation happens in fit)."""
+    X, y = _hyperboloid_data()
+    clf = HyperbolicDecisionTree(backend="not_a_backend", validate_input_geometry=False)
     with pytest.raises(ValueError):
-        HyperbolicDecisionTree(backend="not_a_backend")
+        clf.fit(X, y)
 
 
 def test_unknown_midpoint_method_raises():

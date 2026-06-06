@@ -25,6 +25,8 @@ class HyperbolicDecisionTree(BaseEstimator):
         midpoint_method: Literal["einstein", "naive", "zero"] = "einstein",
         **kwargs: Any,
     ):
+        # Per the scikit-learn convention, __init__ only stores parameters; the
+        # backing estimator is built (and the backend validated) in fit.
         self.backend = backend
         self.task = task
         self.curvature = curvature
@@ -34,6 +36,12 @@ class HyperbolicDecisionTree(BaseEstimator):
         self.midpoint_method = midpoint_method
         self.kwargs = kwargs
 
+    def _make_estimator(self) -> None:
+        """Instantiate the backing estimator for the configured task/backend.
+
+        Called from fit (not __init__) so that constructing the wrapper has no
+        side effects, matching scikit-learn estimator conventions.
+        """
         # Import the appropriate estimator based on task and backend
         estimator_mapping = {
             ("classification", "sklearn_dt"): ("sklearn.tree", "DecisionTreeClassifier"),
@@ -188,6 +196,7 @@ class HyperbolicDecisionTree(BaseEstimator):
         self: HyperbolicDecisionTree
             The fitted hyperbolic decision tree predictor.
         """
+        self._make_estimator()
         X_klein = self._preprocess(X)
         self.estimator_.fit(X_klein, y)
         self._postprocess(X_klein)
