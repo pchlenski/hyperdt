@@ -18,6 +18,10 @@ ignore:
   - "hyperdt/legacy/**"    # Exclude all legacy code from coverage including subdirectories
   - "hyperdt/legacy/*.py"  # Explicitly exclude Python files in the legacy directory itself
   - "tests/**"             # Exclude test files from coverage
+  # scikit-obliquetree (the oblique backend's dependency) hard-pins
+  # typing_extensions==3.10.0.2 / click==7.1.2, which is incompatible with the
+  # test toolchain, so it can't be installed in CI and these tests can't run there.
+  - "hyperdt/oblique.py"
 
 parsers:
   gcov:
